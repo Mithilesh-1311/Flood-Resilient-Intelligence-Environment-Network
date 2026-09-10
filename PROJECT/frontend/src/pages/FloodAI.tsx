@@ -17,6 +17,7 @@ import {
 import { WaterLevelChart } from "@/components/charts/WaterLevelChart";
 import { LiveChart } from "@/components/charts/LiveChart";
 import { CalibrationNote } from "@/components/panels/SensorPanels";
+import { ReplayScorecard, ReplayStrip, TelemetryTag } from "@/components/panels/ReplayPanels";
 import { Panel, Tag } from "@/components/primitives";
 import { CHART } from "@/components/charts/chartTheme";
 import { SOURCE_NODES } from "@/lib/constants";
@@ -40,6 +41,9 @@ export default function FloodAI() {
       />
 
       <div className="space-y-2">
+        {/* Replay only: which real gauge rows the model is being scored on. */}
+        <ReplayStrip />
+
         <div className="grid items-start gap-2 xl:grid-cols-[1fr_280px]">
           <FloodRiskPanel node={node} />
           <div className="space-y-2">
@@ -53,7 +57,7 @@ export default function FloodAI() {
         <Panel
           title={"Water level & forecast · " + node}
           subtitle={"Observed level with the +" + horizon + " min quantile forecast"}
-          right={<Tag tone="accent">LIVE TELEMETRY</Tag>}
+          right={<TelemetryTag />}
         >
           <div className="p-3">
             <WaterLevelChart node={node} windowMs={win.ms} height={300} />
@@ -64,7 +68,7 @@ export default function FloodAI() {
           <Panel
             title="Flood probability"
             subtitle="Model output per source node, with the alarm threshold"
-            right={<Tag tone="accent">LIVE TELEMETRY</Tag>}
+            right={<Tag tone="accent">LIVE MODEL OUTPUT</Tag>}
           >
             <div className="p-2.5">
               <FloodProbabilityChart windowMs={win.ms} />
@@ -74,7 +78,7 @@ export default function FloodAI() {
           <Panel
             title="Predictive uncertainty"
             subtitle="MC-Dropout standard deviation across 20 stochastic passes"
-            right={<Tag tone="accent">LIVE TELEMETRY</Tag>}
+            right={<Tag tone="accent">LIVE MODEL OUTPUT</Tag>}
           >
             <div className="p-2.5">
               <LiveChart
@@ -93,6 +97,10 @@ export default function FloodAI() {
             </div>
           </Panel>
         </div>
+
+        {/* Replay only: live verification against real outcomes. Kept apart from,
+            and above, the offline evaluation it must not be confused with. */}
+        <ReplayScorecard />
 
         <ModelEvaluationPanel />
       </div>

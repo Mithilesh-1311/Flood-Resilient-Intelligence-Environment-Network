@@ -13,7 +13,8 @@ import {
 } from "@/components/panels/SensorPanels";
 import { WaterLevelChart } from "@/components/charts/WaterLevelChart";
 import { LiveChart } from "@/components/charts/LiveChart";
-import { Panel, Tag } from "@/components/primitives";
+import { Panel } from "@/components/primitives";
+import { ReplayStrip, TelemetryTag } from "@/components/panels/ReplayPanels";
 import { CHART } from "@/components/charts/chartTheme";
 import { SOURCE_NODES } from "@/lib/constants";
 import { ConnectionGate, PageHeader, TimeWindowControl, useTimeWindow } from "./shared";
@@ -37,13 +38,15 @@ export default function Sensors() {
       />
 
       <div className="space-y-2">
+        <ReplayStrip />
+
         <SensorTable selected={node} onSelect={setNode} />
 
         <div className="grid gap-2 xl:grid-cols-[1.4fr_1fr]">
           <Panel
             title={"Water level · " + node}
-            subtitle="Calibrated level with the model's forecast band"
-            right={<Tag tone="accent">LIVE TELEMETRY</Tag>}
+            subtitle="River level in metres with the model's forecast band"
+            right={<TelemetryTag />}
           >
             <div className="p-3">
               <WaterLevelChart node={node} windowMs={win.ms} height={250} />

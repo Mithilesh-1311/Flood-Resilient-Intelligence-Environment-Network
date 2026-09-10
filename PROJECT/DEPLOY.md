@@ -23,10 +23,12 @@ Vercel serves the dashboard as a static site. It can't proxy WebSockets, so the
 browser connects straight to the Space over `wss://`. That's why the frontend
 needs `VITE_CONTROLLER_URL`.
 
-> **A hosted backend always runs the simulation.** The physical gateway
-> (`192.168.4.1`) only exists on the ESP32-CAM's own Wi-Fi, and a cloud server
-> can't reach it. The dashboard shows `SIMULATION` for the deployed site.
-> For the hardware demo, see the section at the end.
+> **A hosted backend can't reach the physical gateway.** `192.168.4.1` only
+> exists on the ESP32-CAM's own Wi-Fi. So by default the Space **replays real
+> river-gauge data** from the project's held-out test set through a
+> **simulated mesh**, and the dashboard says exactly that: `REAL GAUGE REPLAY`
+> and `SIMULATED MESH`. See "Real gauge data" below. For the hardware demo, see
+> the section at the end.
 
 ---
 
@@ -59,9 +61,10 @@ curl https://<your-hf-username>-friend-controller.hf.space/healthz
 ```
 
 Opening the Space URL in a browser shows a short JSON description. That's
-expected: it's an API, not a page. The flood model takes about a minute after
-startup to collect its first 9-step window. Until then, the dashboard shows
-"Filling model window".
+expected: it's an API, not a page. `"telemetry": "replay"` confirms it's
+serving real gauge data. The model takes about 10 seconds to load after
+startup. Replayed rows arrive with their input window already built, so
+predictions start as soon as it loads.
 
 **To update the backend later**, run the same command again. It re-copies the
 source files, so the Space never runs a stale copy.
@@ -116,10 +119,13 @@ The last command prints your production URL.
 Open the Vercel URL. Within a few seconds you should see:
 
 - the connection indicator at **LIVE**, with the frame count going up
-- the header tag showing **SIMULATION**
+- the header tags showing **REAL GAUGE REPLAY** and **SIMULATED MESH**
+- a strip naming each gauge (Scalehill, Low Briery, Boscastle) and the real
+  timestamp being replayed
 - mesh topology with three coloured routes, and reroutes appearing in the
   Alert Centre
-- after about a minute: flood probability and the forecast band for S1–S3
+- flood probability and the forecast band for S1–S3, and on **FLOOD AI** a
+  "What actually happened" box plus the live replay scorecard
 
 If the page says **Controller unreachable**, open the Space page. If the Space
 is asleep or still building, the dashboard reconnects on its own once it's
@@ -128,6 +134,57 @@ running.
 Every visitor sees the **same** shared simulation, because there's one
 controller. Chart history, however, is kept per browser, so each visitor's
 charts start when their page opens.
+
+---
+
+## Real gauge data (the default)
+
+The controller has two stand-ins for field hardware. `FRIEND_TELEMETRY` picks
+one:
+
+| `FRIEND_TELEMETRY` | River readings | Mesh network |
+| --- | --- | --- |
+| `replay` (default) | **Real** 15-min rows from `ALL_STATIONS_labelled.csv` | simulated |
+| `simulated` | random walk (`simulate_hardware.py`) | simulated |
+
+To switch modes on the Space, go to **Settings → Variables and secrets → New
+variable**, set `FRIEND_TELEMETRY=simulated`, and restart the Space. If the
+replay file is ever missing, the Space falls back to `simulated` on its own and
+reports that at `GET /`.
+
+**What gets replayed.** `build_replay.py` runs the training pipeline's own
+functions (`split_data`, `fit_train_only`, `transform_scale`) over the labelled
+CSV. It keeps windows around every real flood (12 h run-up, the flood, 6 h
+recession) and writes `flood_dataset/replay_test.csv` (6,140 rows, 1.7 MB). It
+then checks every row's model inputs and labels against `test.npz` /
+`train.npz`: **0 mismatches**. The 229 MB CSV never leaves your machine; only
+the replay file is uploaded.
+
+| Node | Gauge | Rows replayed |
+| --- | --- | --- |
+| S1 | Scalehill, River Cocker | 2023–24 **test**: never seen in training |
+| S2 | Low Briery, River Greta | 2015–20 **training** (the record has no 2021–24 data) |
+| S3 | Boscastle, River Valency | 2023–24 **test**: never seen in training |
+
+S2 is labelled `TRAINING DATA · SEEN` on screen and is kept out of the
+scorecard's held-out total.
+
+**Things to say if asked:**
+
+- Each 15-minute row plays for 6 seconds (a 150× speed-up), and the forecasts
+  are still +30 real minutes ahead.
+- The replay jumps between flood windows, so the level trace steps at each
+  jump. The timeline notes every jump.
+- Floods are far more common in the replay than in a real year, because it was
+  chosen that way. The live scorecard shows behaviour on real data; the offline
+  **MODEL EVALUATION** panel is still the measure of skill.
+
+If the model or the dataset changes, rebuild the replay file and republish:
+
+```powershell
+.venv\Scripts\python build_replay.py
+.venv\Scripts\python deploy\publish_backend.py --push <your-hf-username>/friend-controller
+```
 
 ---
 

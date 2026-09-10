@@ -16,6 +16,7 @@ import { isScored, type NodeId } from "@/types/friend";
 import { EmptyState, NoData, Panel, StatusDot, Tag } from "@/components/primitives";
 import { SOURCE_NODES, healthSeverity, NODE_ORDER } from "@/lib/constants";
 import { clock, cx, num } from "@/lib/format";
+import { obsTime, stationName } from "@/lib/provenance";
 
 /* ------------------------------------------------------------- selector */
 
@@ -84,11 +85,12 @@ export const SensorTable = memo(function SensorTable({
   onSelect?: (id: NodeId) => void;
   className?: string;
 }) {
-  const { rows, updated, compressed } = useRealtime((s) => {
+  const { rows, updated, compressed, replay } = useRealtime((s) => {
     const st = s.state;
     return {
       updated: st?.timestamp ?? null,
       compressed: st?.flood_ai?.cadence?.time_compressed ?? false,
+      replay: st?.flood_ai?.source === "replay",
       rows: SOURCE_NODES.map((id) => {
         const sensor = st?.sensor_data?.[id];
         const ai = st?.flood_ai?.nodes?.[id];
@@ -114,7 +116,11 @@ export const SensorTable = memo(function SensorTable({
   return (
     <Panel
       title="Source node telemetry"
-      subtitle="S1–S3 · values as reported by the field firmware"
+      subtitle={
+        replay
+          ? "S1–S3 · real gauge rows, sent through the gateway in the firmware's message format"
+          : "S1–S3 · values as reported by the field firmware"
+      }
       className={className}
       right={
         <span className="font-mono text-2xs text-ink-ghost">
@@ -134,7 +140,7 @@ export const SensorTable = memo(function SensorTable({
             <tr>
               <th className="th w-14">NODE</th>
               <th className="th w-24 text-right">WATER %</th>
-              <th className="th w-28 text-right">LEVEL (CAL.)</th>
+              <th className="th w-28 text-right">{replay ? "LEVEL (GAUGE)" : "LEVEL (CAL.)"}</th>
               <th className="th w-24 text-right">FLOOD LINE</th>
               <th className="th w-16">RAIN</th>
               <th className="th w-20 text-right">TEMP °C</th>
@@ -215,10 +221,22 @@ export const SensorTable = memo(function SensorTable({
       )}
 
       <p className="border-t border-line px-3 py-2 text-2xs leading-relaxed text-ink-ghost">
-        WATER % is the raw firmware reading (0–100 % of the analog sensor span). LEVEL (CAL.) is that
-        value mapped onto the station's observed stage range from <span className="font-mono">station_params.json</span> — a
-        stated calibration, not a measured depth. It is the number fed to the GRU.
-        {compressed && " Model steps are time-compressed for this demo; see the Flood AI module."}
+        {replay ? (
+          <>
+            Every value here is a real 15-minute reading from the held-out part of the project's
+            dataset. LEVEL (GAUGE) is the measured river stage in metres; WATER % is that stage on
+            the station's train-period range, which is how the dataset records it. The mesh network
+            carrying these rows is simulated.
+          </>
+        ) : (
+          <>
+            WATER % is the raw firmware reading (0–100 % of the analog sensor span). LEVEL (CAL.) is that
+            value mapped onto the station's observed stage range from{" "}
+            <span className="font-mono">station_params.json</span> — a stated calibration, not a
+            measured depth. It is the number fed to the GRU.
+            {compressed && " Model steps are time-compressed for this demo; see the Flood AI module."}
+          </>
+        )}
       </p>
     </Panel>
   );
@@ -260,23 +278,47 @@ export const SensorVitals = memo(function SensorVitals({ node }: { node: NodeId 
   );
 });
 
-/** Station calibration disclosure for the selected node. */
+/**
+ * Where the selected node's metres come from: a stated calibration of the
+ * 0-100 % sensor, or - in replay - a real gauge, which needs no calibration.
+ */
 export const CalibrationNote = memo(function CalibrationNote({ node }: { node: NodeId }) {
-  const cal = useRealtime((s) => {
+  const d = useRealtime((s) => {
     const ai = s.state?.flood_ai?.nodes?.[node];
-    return isScored(ai) ? { ...ai.calibration, station: ai.station, hCrit: ai.h_crit_m } : null;
+    if (!isScored(ai)) return null;
+    return {
+      station: ai.station,
+      hCrit: ai.h_crit_m,
+      lo: ai.calibration?.level_min_m ?? null,
+      hi: ai.calibration?.level_max_m ?? null,
+      source: ai.calibration?.source ?? null,
+      replayTime: ai.replay?.time ?? null,
+    };
   }, shallowEqual);
 
-  if (!cal) return null;
+  if (!d) return null;
+
+  if (d.replayTime) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 border border-ok/25 bg-base-800 px-2.5 py-2">
+        <Tag tone="ok">REAL GAUGE DATA</Tag>
+        <span className="font-mono text-2xs text-ink-faint">
+          {node} · {stationName(d.station)} · reading {obsTime(d.replayTime)} · flood line{" "}
+          {num(d.hCrit, 3)} m
+        </span>
+        <span className="text-2xs text-ink-ghost">(measured stage in metres — no calibration applied)</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2 border border-line bg-base-800 px-2.5 py-2">
       <Tag tone="warn">STATED CALIBRATION</Tag>
       <span className="font-mono text-2xs text-ink-faint">
-        {node} 0–100 % → {num(cal.level_min_m, 2)}–{num(cal.level_max_m, 2)} m ·{" "}
-        {cal.station.replace(/_/g, " ")} · flood line {num(cal.hCrit, 2)} m
+        {node} 0–100 % → {num(d.lo, 2)}–{num(d.hi, 2)} m · {stationName(d.station)} · flood line{" "}
+        {num(d.hCrit, 2)} m
       </span>
-      <span className="text-2xs text-ink-ghost">({cal.source})</span>
+      {d.source && <span className="text-2xs text-ink-ghost">({d.source})</span>}
     </div>
   );
 });

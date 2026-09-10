@@ -64,8 +64,10 @@ try {
   pass("WebSocket reaches LIVE");
 
   // Exactly one OPEN socket for the whole app. (A dev build under StrictMode
-  // opens and immediately closes one extra, so count the live ones.)
-  const open = sockets.filter((ws) => !ws.isClosed());
+  // opens and immediately closes one extra, so count the live ones.) Vite's
+  // own hot-reload socket (`/?token=...`, dev server only) is not the app's.
+  const isViteHmr = (url) => /\/\?token=/.test(url);
+  const open = sockets.filter((ws) => !ws.isClosed() && !isViteHmr(ws.url()));
   check(open.length === 1, "Single WebSocket", open.map((ws) => ws.url()).join(", ") || "none open");
 
   /* ------------------------------------------------ 2. live values move */
@@ -225,6 +227,37 @@ try {
     "Connection indicator exposes link state to assistive tech",
     JSON.stringify(indicatorStates.slice(0, 2)),
   );
+
+  /* --------------------- 9b. real-data replay (only when the controller runs it) */
+  const st = await fetch("http://127.0.0.1:8000/state").then((r) => r.json());
+  if (st.flood_ai?.source === "replay") {
+    await navigate(page, "FLOOD AI", "Flood-Risk AI");
+    await sleep(3000);
+    const text = (await page.evaluate(() => document.body.innerText)).toLowerCase();
+    check(text.includes("real gauge replay"), "Replay is labelled as real gauge data");
+    check(
+      text.includes("what actually happened"),
+      "Prediction shown next to the real outcome",
+    );
+    check(text.includes("replay scorecard"), "Live replay scorecard rendered");
+    check(
+      text.includes("inputs verified"),
+      "Input parity with the model's arrays is disclosed",
+    );
+    const sc = st.flood_ai.replay?.scorecard;
+    check(
+      !!sc && Object.keys(sc.per_node ?? {}).length > 0,
+      "Controller is scoring real rows",
+      sc ? JSON.stringify(sc.per_node) : "no scorecard",
+    );
+    const trained = Object.entries(sc?.per_node ?? {}).filter(([, s]) => s.held_out === false).map(([n]) => n);
+    check(
+      trained.every((n) => !(sc.total_nodes ?? []).includes(n)),
+      "Training-split rows kept out of the held-out total",
+      "excluded: " + (trained.join(", ") || "none"),
+    );
+    await page.screenshot({ path: `${SHOTS}/12-flood-ai-replay.png`, fullPage: true });
+  }
 
   /* ------------------------------- 10. deep links load directly (SPA host) */
   // On Vercel this is what the rewrite in vercel.json guarantees: a refresh or

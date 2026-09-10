@@ -29,6 +29,10 @@ FILES = [
     ("HARDWARE/nc1.py", "HARDWARE/nc1.py"),
     ("HARDWARE/flood_ai.py", "HARDWARE/flood_ai.py"),
     ("HARDWARE/simulate_hardware.py", "HARDWARE/simulate_hardware.py"),
+    ("HARDWARE/replay_hardware.py", "HARDWARE/replay_hardware.py"),
+    # Real held-out gauge rows for the default replay mode (build_replay.py).
+    ("flood_dataset/replay_test.csv", "flood_dataset/replay_test.csv"),
+    ("flood_dataset/replay_test_meta.json", "flood_dataset/replay_test_meta.json"),
     ("models/flood_gru.keras", "models/flood_gru.keras"),
     ("models/threshold.json", "models/threshold.json"),
     ("models/metrics.json", "models/metrics.json"),

@@ -12,13 +12,18 @@ inference, and no estimation of its own.
 
 Two processes. Start the controller first.
 
-**1 — Controller (simulated field, no hardware needed)**
+**1 — Controller (no hardware needed)**
 
 ```bash
 cd PROJECT/HARDWARE
-../.venv/Scripts/python simulate_hardware.py      # Windows
-../.venv/bin/python simulate_hardware.py          # macOS / Linux
+../.venv/Scripts/python replay_hardware.py        # REAL gauge data, simulated mesh
+../.venv/Scripts/python simulate_hardware.py      # random-walk telemetry instead
 ```
+
+(On macOS/Linux use `../.venv/bin/python`.) `replay_hardware.py` needs
+`flood_dataset/replay_test.csv`, which `py build_replay.py` builds from the
+labelled dataset. In replay mode the dashboard shows each prediction next to
+what the river actually did.
 
 Against real hardware, run `python nc1.py` instead (it connects out to the
 ESP32-CAM gateway at `192.168.4.1:9000`). Either way the API is the same, and

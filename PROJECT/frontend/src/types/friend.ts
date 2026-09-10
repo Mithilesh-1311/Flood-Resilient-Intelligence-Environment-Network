@@ -49,11 +49,39 @@ export interface FloodForecast {
   q90_m: number;
 }
 
+/** Ground truth for a replayed dataset row: what the river actually did. */
+export interface ReplayTruth {
+  /** y_flood: did the level reach the flood line within the next 30 min? */
+  flood: boolean;
+  /** Actual level at +30 min (level_norm_fut), in flood-line units and metres. */
+  level_norm: number;
+  level_m: number;
+  /** Whether that actual level fell inside the model's q10-q90 band. */
+  in_band: boolean;
+}
+
+export interface FloodNodeReplay {
+  /** Real observation timestamp of the gauge row being scored. */
+  time: string;
+  split: string;
+  window: number;
+  kind: "flood_event" | "highest_water";
+  rain_mm: number | null;
+  dh_dt_m_per_h: number | null;
+  api: number | null;
+  truth: ReplayTruth;
+}
+
 export interface FloodNodeOk {
   status: "ok";
   station: string;
   h_crit_m: number;
-  calibration: { level_min_m: number; level_max_m: number; source: string };
+  /** sensor_calibrated: 0-100 % telemetry mapped to metres. gauge_replay: real gauge metres. */
+  level_source?: "sensor_calibrated" | "gauge_replay";
+  /** Present for calibrated sensor telemetry; null for replayed gauge data. */
+  calibration: { level_min_m: number; level_max_m: number; source: string } | null;
+  /** Present only while the node is replaying the real dataset. */
+  replay?: FloodNodeReplay;
   level_m: number;
   level_norm: number;
   flood_probability: number;
@@ -117,7 +145,78 @@ export interface FloodEvaluation {
   };
 }
 
+/** Session tally of replayed rows against their real outcomes. */
+export interface ReplayScore {
+  rows: number;
+  hits: number;
+  misses: number;
+  false_alarms: number;
+  correct_negatives: number;
+  band_hits: number;
+  /** null when the denominator is empty - never a fake 0. */
+  POD: number | null;
+  FAR: number | null;
+  CSI: number | null;
+  band_coverage: number | null;
+  /** Split the node is replaying; train rows are excluded from the total. */
+  split?: string;
+  held_out?: boolean;
+}
+
+export interface ParitySplit {
+  checked: boolean;
+  passed?: boolean;
+  against?: string;
+  rows: number;
+  missing_rows?: number;
+  y_flood_mismatches?: number;
+  reason?: string;
+}
+
+export interface ReplayNodeInfo {
+  station: string;
+  split: string;
+  time: string;
+  position: number;
+  rows: number | null;
+  window: number;
+  windows: number | null;
+  kind: "flood_event" | "highest_water";
+  window_start: string | null;
+  window_end: string | null;
+  window_peak_level_norm: number | null;
+}
+
+export interface ReplayBlock {
+  dataset: string;
+  generated_at?: string | null;
+  split_years?: Record<string, number[]> | null;
+  selection?: string | null;
+  /** Replayed model inputs + labels compared row-for-row with the npz arrays. */
+  parity?: {
+    checked: boolean;
+    passed?: boolean;
+    rows?: number;
+    missing_rows?: number;
+    y_flood_mismatches?: number;
+    unchecked_rows?: number;
+    splits?: Record<string, ParitySplit>;
+  } | null;
+  nodes: Record<NodeId, ReplayNodeInfo>;
+  scorecard: {
+    threshold: number;
+    note: string;
+    /** Held-out rows only. */
+    total: ReplayScore;
+    total_nodes?: NodeId[];
+    per_node: Record<NodeId, ReplayScore>;
+  };
+}
+
 export interface FloodAIBlock {
+  /** "replay" while source nodes are driven by the real dataset. */
+  source?: "sensor" | "replay";
+  replay?: ReplayBlock | null;
   available: boolean;
   status: "not_loaded" | "loading" | "ready" | "unavailable";
   reason?: string | null;

@@ -129,7 +129,11 @@ export function deriveEvents(
       title: "Controller state stream established",
       where: next.system?.gateway_host ?? "controller",
       detail:
-        (next.system?.data_source === "SIMULATION" ? "SIMULATION" : "LIVE HARDWARE") +
+        (next.flood_ai?.source === "replay"
+          ? "REAL GAUGE REPLAY on a SIMULATED MESH"
+          : next.system?.data_source === "SIMULATION"
+            ? "SIMULATION"
+            : "LIVE HARDWARE") +
         " / " + (next.active_routes?.length ?? 0) + " active route(s)" +
         " / " + (next.nodes?.length ?? 0) + " nodes in routing graph",
     });
@@ -291,10 +295,40 @@ export function deriveEvents(
         title: node + " flood inference started",
         where: node,
         detail:
-          "Rolling window filled (" + b.model_steps + " model steps). " +
+          (b.replay
+            ? "Scoring real gauge rows from " + b.station + ", starting " + b.replay.time + ". "
+            : "Rolling window filled (" + b.model_steps + " model steps). ") +
           "P(flood) " + prob(b.flood_probability) + " +/- " + num(b.uncertainty, 3),
       });
       continue;
+    }
+
+    // Replay only: the dataset records what the river really did, so the
+    // timeline can mark real floods and show whether the model saw them coming.
+    if (a.replay && b.replay) {
+      if (a.replay.window !== b.replay.window) {
+        push({
+          category: "SENSOR",
+          severity: "info",
+          title: "Replay moved to the next real flood window / " + node,
+          where: node + " / " + b.station,
+          detail:
+            "Gauge data now at " + b.replay.time + " (window " + (b.replay.window + 1) +
+            "). The level trace jumps here because the replay skips the quiet months between floods.",
+        });
+      }
+      if (!a.replay.truth.flood && b.replay.truth.flood) {
+        push({
+          category: "SENSOR",
+          severity: "critical",
+          title: "Gauge record: real flood within " + horizon + " min / " + node,
+          where: node + " / " + b.station,
+          detail:
+            "The dataset shows the river reaching the flood line within " + horizon + " min of " +
+            b.replay.time + ". Model alarm is " + (b.alarm ? "ON" : "OFF") + " (P(flood) " +
+            prob(b.flood_probability) + ").",
+        });
+      }
     }
 
     if (threshold !== undefined && !a.alarm && b.alarm) {

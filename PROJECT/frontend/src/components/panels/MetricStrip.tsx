@@ -14,6 +14,7 @@ import { healthSeverity, type Severity } from "@/lib/constants";
 import { cx, num, prob, signed } from "@/lib/format";
 import { isScored } from "@/types/friend";
 import { useHistory, useFrameVersion } from "@/realtime/RealtimeProvider";
+import { provenance, TELEMETRY_LABEL } from "@/lib/provenance";
 
 function Tile({
   label,
@@ -80,7 +81,7 @@ export const MetricStrip = memo(function MetricStrip() {
     return {
       link: snap.link,
       frames: snap.frames,
-      dataSource: st?.system?.data_source ?? null,
+      telemetry: provenance(st).telemetry,
       gatewayUp: st?.system?.gateway_connected ?? false,
       aiAvailable: st?.flood_ai?.available ?? false,
       aiStatus: st?.flood_ai?.status ?? "not_loaded",
@@ -123,7 +124,7 @@ export const MetricStrip = memo(function MetricStrip() {
       <Tile
         label="System status"
         severity={s.gatewayUp ? "ok" : "crit"}
-        footer={s.dataSource === "SIMULATION" ? "SIMULATED FIELD" : "FIELD HARDWARE"}
+        footer={s.telemetry ? TELEMETRY_LABEL[s.telemetry] : "—"}
       >
         <Readout
           size="md"

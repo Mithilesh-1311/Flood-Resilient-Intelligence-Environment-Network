@@ -6,7 +6,7 @@
  * flood graph and topology give the why; the alert rail gives the history.
  */
 import { useState } from "react";
-import { useRealtime, shallowEqual } from "@/realtime/RealtimeProvider";
+import { useRealtime } from "@/realtime/RealtimeProvider";
 import { MetricStrip } from "@/components/panels/MetricStrip";
 import { AlertRail } from "@/components/panels/AlertRail";
 import { SelfHealingBanner, RouteTable } from "@/components/panels/RoutePanel";
@@ -14,7 +14,8 @@ import { NetworkTopology } from "@/components/topology/NetworkTopology";
 import { TopologyLegend } from "@/components/panels/NetworkPanels";
 import { WaterLevelChart } from "@/components/charts/WaterLevelChart";
 import { LiveChart } from "@/components/charts/LiveChart";
-import { Panel, Tag } from "@/components/primitives";
+import { Panel } from "@/components/primitives";
+import { ReplayStrip, TelemetryTag } from "@/components/panels/ReplayPanels";
 import { CHART } from "@/components/charts/chartTheme";
 import { SOURCE_NODES } from "@/lib/constants";
 import { SensorSelector } from "@/components/panels/SensorPanels";
@@ -31,26 +32,19 @@ export default function Overview() {
   // primary graph is showing the node that matters without being asked.
   const node = manualNode ?? worstNode ?? SOURCE_NODES[0];
 
-  const source = useRealtime(
-    (s) => s.state?.system?.data_source ?? null,
-    shallowEqual,
-  );
-
   return (
     <ConnectionGate>
       <PageHeader
         title="Command centre"
         subtitle="Flood-risk intelligence and self-healing mesh status"
-        right={
-          <>
-            {source === "SIMULATION" && <Tag tone="warn">SIMULATED FIELD DATA</Tag>}
-            <TimeWindowControl value={win.label} onChange={win.setLabel} />
-          </>
-        }
+        right={<TimeWindowControl value={win.label} onChange={win.setLabel} />}
       />
 
       <div className="space-y-2">
         <MetricStrip />
+
+        {/* Replay only: which real gauge, which real moment, which flood. */}
+        <ReplayStrip />
 
         <SelfHealingBanner />
 
@@ -61,7 +55,7 @@ export default function Overview() {
             subtitle={"Observed level, flood line and the model's quantile forecast"}
             right={
               <div className="flex items-center gap-2">
-                <Tag tone="accent">LIVE TELEMETRY</Tag>
+                <TelemetryTag />
                 <SensorSelector value={node} onChange={setManualNode} />
               </div>
             }

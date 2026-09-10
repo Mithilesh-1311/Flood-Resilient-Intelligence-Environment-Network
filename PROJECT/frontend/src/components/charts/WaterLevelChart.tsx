@@ -68,7 +68,7 @@ export const WaterLevelChart = memo(function WaterLevelChart({
   const ratio = ai?.cadence?.time_compressed ? (ai.cadence.compression_ratio || 1) : 1;
   const horizonMs = (horizonMin * 60_000) / ratio;
 
-  const { rows, hCrit, peak, domain } = useMemo(() => {
+  const { rows, hCrit, peak, domain, actual } = useMemo(() => {
     const samples: HistorySample[] = windowed(history.all(), windowMs);
     const observed = samples
       .map((s) => ({ t: s.t, level: s.levelM[node] ?? null, floodP: s.floodP[node] ?? null }))
@@ -91,6 +91,10 @@ export const WaterLevelChart = memo(function WaterLevelChart({
       if (!peakPoint || r.level > peakPoint.level) peakPoint = { t: r.t, level: r.level };
     }
 
+    // Replay only: the real level at the forecast horizon, from the dataset's
+    // own label, placed where the forecast lands so the two can be compared.
+    let actualPoint: { t: number; level: number } | null = null;
+
     if (scored && base.length) {
       const last = base[base.length - 1];
       // Bridge row: pins the dashed forecast to the end of the observed line
@@ -104,6 +108,7 @@ export const WaterLevelChart = memo(function WaterLevelChart({
         band: [scored.forecast.q10_m, scored.forecast.q90_m],
         floodP: null,
       });
+      if (scored.replay) actualPoint = { t: last.t + horizonMs, level: scored.replay.truth.level_m };
     }
 
     const values: number[] = [];
@@ -113,6 +118,7 @@ export const WaterLevelChart = memo(function WaterLevelChart({
       if (r.band) values.push(r.band[0], r.band[1]);
     }
     if (critical !== null) values.push(critical);
+    if (actualPoint) values.push(actualPoint.level);
 
     const lo = values.length ? Math.min(...values) : 0;
     const hi = values.length ? Math.max(...values) : 1;
@@ -122,11 +128,13 @@ export const WaterLevelChart = memo(function WaterLevelChart({
       rows: base,
       hCrit: critical,
       peak: peakPoint,
+      actual: actualPoint,
       domain: [Number((lo - pad).toFixed(2)), Number((hi + pad).toFixed(2))] as [number, number],
     };
     // `version` is the dependency that matters: it changes once per frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version, windowMs, node, history, horizonMs, scored?.level_m, scored?.h_crit_m]);
+  }, [version, windowMs, node, history, horizonMs, scored?.level_m, scored?.h_crit_m,
+      scored?.replay?.truth?.level_m]);
 
   if (!rows.length) {
     return (
@@ -249,6 +257,24 @@ export const WaterLevelChart = memo(function WaterLevelChart({
               />
             )}
 
+            {actual && (
+              <ReferenceDot
+                x={actual.t}
+                y={actual.level}
+                r={4}
+                fill={CHART.ok}
+                stroke="#080A0D"
+                strokeWidth={1.5}
+                label={{
+                  value: "ACTUAL " + num(actual.level, 2),
+                  position: "left",
+                  fill: CHART.ok,
+                  fontSize: 9,
+                  fontFamily: "JetBrains Mono, monospace",
+                }}
+              />
+            )}
+
             <Tooltip
               cursor={{ stroke: CHART.axis, strokeWidth: 1 }}
               isAnimationActive={false}
@@ -270,6 +296,9 @@ export const WaterLevelChart = memo(function WaterLevelChart({
                     { label: "q10", value: num(row.band[0], 3) + " m", muted: true },
                     { label: "q90", value: num(row.band[1], 3) + " m", muted: true },
                   );
+                  if (actual) {
+                    rowsOut.push({ label: "Actual", value: num(actual.level, 3) + " m", color: CHART.ok });
+                  }
                 }
                 if (row.floodP !== null) {
                   rowsOut.push({ label: "P(flood)", value: prob(row.floodP, 2) });
@@ -302,18 +331,22 @@ export const WaterLevelChart = memo(function WaterLevelChart({
             { label: "q10–q90 band", color: CHART.accent, area: true },
             { label: "Flood line", color: CHART.crit, dashed: true },
             { label: "Alert 90%", color: CHART.warn, dashed: true },
+            ...(actual ? [{ label: "Actual +" + horizonMin + " min (gauge)", color: CHART.ok }] : []),
           ]}
         />
         {ai?.cadence?.time_compressed && (
           <span
             className="font-mono text-2xs text-ink-ghost"
             title={
-              "The GRU steps every " + (ai.cadence.model_step_minutes) +
-              " model-minutes. Live telemetry arrives every ~2 s, so one model step is " +
-              "committed every " + ai.cadence.live_seconds_per_model_step + " s of wall clock."
+              ai.source === "replay"
+                ? "Each real " + ai.cadence.model_step_minutes + "-minute gauge row is played for " +
+                  ai.cadence.live_seconds_per_model_step + " s of wall clock."
+                : "The GRU steps every " + ai.cadence.model_step_minutes +
+                  " model-minutes. Live telemetry arrives every ~2 s, so one model step is " +
+                  "committed every " + ai.cadence.live_seconds_per_model_step + " s of wall clock."
             }
           >
-            TIME-COMPRESSED DEMO CADENCE ·{" "}
+            {ai.source === "replay" ? "REAL ROWS PLAYED AT " : "TIME-COMPRESSED DEMO CADENCE · "}
             {ai.cadence.compression_ratio.toFixed(0)}× · +{horizonMin} MIN HORIZON PLOTTED AT{" "}
             {(horizonMs / 1000).toFixed(0)}s
           </span>

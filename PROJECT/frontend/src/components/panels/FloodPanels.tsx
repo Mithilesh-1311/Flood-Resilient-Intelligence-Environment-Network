@@ -20,6 +20,8 @@ import { isScored, type NodeId, type SplitMetrics } from "@/types/friend";
 import { EmptyState, KeyValue, NoData, Panel, Readout, StatusDot, Tag, Bar } from "@/components/primitives";
 import { SOURCE_NODES } from "@/lib/constants";
 import { cx, num, prob } from "@/lib/format";
+import { obsTime } from "@/lib/provenance";
+import { TruthReadout } from "./ReplayPanels";
 
 /* ------------------------------------------------------------- live panel */
 
@@ -91,11 +93,18 @@ export const FloodRiskPanel = memo(function FloodRiskPanel({
   return (
     <Panel
       title={"Flood-Risk AI · " + node}
-      subtitle={n.station.replace(/_/g, " ")}
+      subtitle={
+        n.station.replace(/_/g, " ") +
+        (n.replay ? " · real gauge reading " + obsTime(n.replay.time) : "")
+      }
       className={className}
       right={
         <div className="flex items-center gap-1.5">
-          <Tag tone="accent">LIVE TELEMETRY</Tag>
+          {n.replay ? (
+            <Tag tone="ok">REAL GAUGE DATA</Tag>
+          ) : (
+            <Tag tone="accent">LIVE TELEMETRY</Tag>
+          )}
           {alarm && <Tag tone="crit">ALARM</Tag>}
         </div>
       }
@@ -137,12 +146,16 @@ export const FloodRiskPanel = memo(function FloodRiskPanel({
           </div>
 
           <dl className="mt-4">
-            <KeyValue k="Observed level">{num(n.level_m, 3)} m</KeyValue>
+            <KeyValue k={n.replay ? "Gauge level (real)" : "Observed level"}>
+              {num(n.level_m, 3)} m
+            </KeyValue>
             <KeyValue k="Flood line (h_crit)">{num(n.h_crit_m, 3)} m</KeyValue>
             <KeyValue k="Level / flood line">
               <span className={cx(n.level_norm >= 1 && "text-crit")}>{num(n.level_norm, 3)}</span>
             </KeyValue>
-            <KeyValue k="Model steps collected">{n.model_steps}</KeyValue>
+            <KeyValue k={n.replay ? "Real rows replayed" : "Model steps collected"}>
+              {n.model_steps}
+            </KeyValue>
           </dl>
         </div>
 
@@ -206,6 +219,12 @@ export const FloodRiskPanel = memo(function FloodRiskPanel({
           )}
         </div>
       </div>
+      {/* Replay only: the row's real outcome, next to the forecast above. */}
+      {n.replay && (
+        <div className="px-3 pb-3">
+          <TruthReadout node={node} />
+        </div>
+      )}
     </Panel>
   );
 });
@@ -454,6 +473,7 @@ export const ModelIdentity = memo(function ModelIdentity({ className }: { classN
       compressed: ai?.cadence?.time_compressed ?? false,
       ratio: ai?.cadence?.compression_ratio ?? null,
       liveStep: ai?.cadence?.live_seconds_per_model_step ?? null,
+      replay: ai?.source === "replay",
     };
   }, shallowEqual);
 
@@ -487,10 +507,22 @@ export const ModelIdentity = memo(function ModelIdentity({ className }: { classN
         <div className="border-t border-line bg-warn/[0.04] px-2.5 py-2">
           <Tag tone="warn">TIME-COMPRESSED</Tag>
           <p className="mt-1.5 text-2xs leading-relaxed text-ink-faint">
-            The GRU steps every {m.step} model-minutes. Live telemetry arrives every ~2 s, so the
-            controller commits one model step per {m.liveStep} s of wall clock — a{" "}
-            <span className="font-mono text-ink-dim">{m.ratio}×</span> compression, so the window
-            fills within a demo rather than over two real hours. Forecasts remain +{m.horizon} model-minutes ahead.
+            {m.replay ? (
+              <>
+                The replay plays one real {m.step}-minute gauge row every {m.liveStep} s of wall
+                clock — a <span className="font-mono text-ink-dim">{m.ratio}×</span> speed-up. The
+                rows themselves are unchanged: forecasts are still +{m.horizon} real minutes ahead,
+                and each is scored against what the river did then.
+              </>
+            ) : (
+              <>
+                The GRU steps every {m.step} model-minutes. Live telemetry arrives every ~2 s, so the
+                controller commits one model step per {m.liveStep} s of wall clock — a{" "}
+                <span className="font-mono text-ink-dim">{m.ratio}×</span> compression, so the window
+                fills within a demo rather than over two real hours. Forecasts remain +{m.horizon}{" "}
+                model-minutes ahead.
+              </>
+            )}
           </p>
         </div>
       )}

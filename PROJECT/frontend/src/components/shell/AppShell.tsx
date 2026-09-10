@@ -19,7 +19,8 @@ import type { LucideIcon } from "lucide-react";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { OperatorActions } from "./OperatorActions";
 import { useRealtime, shallowEqual } from "@/realtime/RealtimeProvider";
-import { StatusDot, Tag } from "@/components/primitives";
+import { StatusDot } from "@/components/primitives";
+import { ProvenanceTags } from "@/components/panels/ReplayPanels";
 import { clock, cx, duration } from "@/lib/format";
 import { networkSummary } from "@/lib/derive";
 import { healthSeverity } from "@/lib/constants";
@@ -73,8 +74,6 @@ function TopStatusBar() {
     };
   }, shallowEqual);
 
-  const source = system?.data_source;
-
   return (
     <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line bg-base-800 px-3">
       <div className="flex min-w-0 items-center gap-4">
@@ -84,12 +83,8 @@ function TopStatusBar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        {/* Simulation vs real hardware is stated, never implied. */}
-        {source && (
-          <Tag tone={source === "SIMULATION" ? "warn" : "accent"}>
-            {source === "SIMULATION" ? "SIMULATION" : "LIVE HARDWARE"}
-          </Tag>
-        )}
+        {/* What is real and what is simulated is stated, never implied. */}
+        <ProvenanceTags />
         <div className="hidden items-center gap-1.5 xl:flex" title="Gateway TCP bridge">
           <StatusDot
             severity={system?.gateway_connected ? "ok" : "crit"}

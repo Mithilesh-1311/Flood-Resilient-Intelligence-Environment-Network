@@ -11,6 +11,9 @@ taken on trust. The full diff for `nc1.py` is in `nc1.integration.patch`.
 | `HARDWARE/nc1.py` | **77 lines added, 0 removed.** Purely additive. |
 | `HARDWARE/flood_ai.py` | **New.** Live flood inference service. |
 | `HARDWARE/simulate_hardware.py` | **Unchanged.** |
+| `HARDWARE/replay_hardware.py` | **New.** Replays real gauge rows through the same fake gateway. |
+| `build_replay.py` | **New.** Builds the replay file with the pipeline's own functions. |
+| `flood_dataset/replay_test.csv`, `replay_test_meta.json` | **New.** 6,140 real rows + provenance. |
 | `HARDWARE/*.ino` | **Unchanged.** |
 | `models/*`, `flood_dataset/*` | **Unchanged.** Read-only. |
 | `train_gru.py`, `predict_demo.py`, and the rest of the pipeline | **Unchanged.** |
@@ -147,4 +150,59 @@ cd frontend && npm run dev                                     # terminal 2
 cd frontend && npm run verify                                  # terminal 3
 ```
 
-Last run: **22/22**, screenshots in `frontend/verify-shots/`.
+Screenshots are in `frontend/verify-shots/`.
+
+## Real-data replay
+
+The random-walk simulator gave the model nothing real to predict. The replay
+path feeds it the project's own labelled gauge data instead, without touching
+`nc1.py` or `simulate_hardware.py`.
+
+**`build_replay.py`** (offline, needs pandas) doesn't re-implement
+preprocessing. It imports and runs the pipeline's own steps in training order:
+
+1. `split_data.tag_events` / `assign_split` (whole years, whole flood events)
+2. `fit_train_only.apply_params` (train-only flood lines, labels recomputed)
+3. `transform_scale.tame` / `build_model_table`
+
+It then keeps windows around each real flood and **compares every row with the
+model's own arrays**. Result: 6,140 rows, 0 missing, 0 label mismatches, and a
+maximum input difference of 2×10⁻⁷ (float32 rounding).
+
+**`replay_hardware.py`** reuses `simulate_hardware.py`'s fake gateway, probe
+traffic and fault injection unchanged. For each row, every 6 s per node:
+
+- It sends telemetry through the gateway in the firmware's message format, so
+  the sensor table and charts get real readings. It doesn't calibrate the
+  water level: it sends the dataset's own `water_level`.
+- It hands the row's model-ready inputs and ground truth to
+  `flood_ai.push_replay_row()` in-process, so the model sees exactly what the
+  test score saw.
+
+**`flood_ai.py` additions:**
+
+- A replay node's model step is one dataset row. Its binned telemetry is
+  ignored, so rows aren't double-counted.
+- Each row is scored once against its real `y_flood` and `level_norm_fut`.
+- The payload gains `source`, per-node `replay` (real timestamp, split, truth)
+  and a session `scorecard`. The scorecard's headline total covers held-out
+  rows only.
+
+Sensor telemetry mode is unchanged.
+
+**One correction made along the way:** I first suspected `flood_ai.py` used the
+wrong flood line, because the labelled CSV says 1.15 m for Boscastle and
+`station_params.json` says 1.164 m. It doesn't. `fit_train_only.py` rebuilds
+`h_crit_m`, `level_norm` and the labels from train-only numbers before
+training, so `station_params.json` is what the model learned. The CSV's own
+`h_crit_m` column is the pre-refit value and is never fed to the model.
+
+**Honest limits of the replay:**
+
+- **S2 (Low Briery) has no 2021–24 rows in the dataset**, which is also why
+  the offline metrics list only two stations. It replays training-period
+  floods, is labelled as seen, and is excluded from the held-out total.
+- Windows were chosen around floods, so the replay scorecard over-represents
+  floods. It shows behaviour on real data; the offline evaluation remains the
+  skill measure.
+- The mesh is still simulated. The dataset records rivers, not radio links.

@@ -15,6 +15,7 @@ import { NODE_ORDER } from "@/lib/constants";
 import { networkSummary } from "@/lib/derive";
 import { clock, duration, num, pct } from "@/lib/format";
 import { ConnectionGate, PageHeader, TimeWindowControl, useTimeWindow } from "./shared";
+import { provenance } from "@/lib/provenance";
 
 function PacketTotals() {
   const totals = useRealtime((s) => {
@@ -106,6 +107,7 @@ function PacketTotals() {
 
 function ControllerPanel() {
   const sys = useRealtime((s) => s.state?.system ?? null, shallowEqual);
+  const telemetry = useRealtime((s) => provenance(s.state).telemetry);
   const meta = useRealtime(
     (s) => ({
       nodes: s.state?.nodes?.length ?? 0,
@@ -156,10 +158,22 @@ function ControllerPanel() {
         <div className="border-t border-line bg-warn/[0.04] px-2.5 py-2">
           <Tag tone="warn">SIMULATION</Tag>
           <p className="mt-1.5 text-2xs leading-relaxed text-ink-faint">
-            The controller's TCP client is pointed at loopback, which means it is talking to
-            simulate_hardware.py rather than the ESP32-CAM gateway. Every sensor reading and packet
-            counter on this dashboard is generated, not measured. The routing, health and inference
-            logic acting on them is the real thing — simulate_hardware.py imports nc1.py unmodified.
+            {telemetry === "REPLAY" ? (
+              <>
+                The controller's TCP client is pointed at loopback: it is talking to
+                replay_hardware.py, not the ESP32-CAM gateway. The <strong>river readings are real</strong>{" "}
+                — held-out gauge rows from the project's labelled dataset — but the mesh is simulated,
+                so every packet counter and PDR value here is generated. The routing, health and
+                inference logic is the real thing; nc1.py runs unmodified.
+              </>
+            ) : (
+              <>
+                The controller's TCP client is pointed at loopback, which means it is talking to
+                simulate_hardware.py rather than the ESP32-CAM gateway. Every sensor reading and packet
+                counter on this dashboard is generated, not measured. The routing, health and inference
+                logic acting on them is the real thing — simulate_hardware.py imports nc1.py unmodified.
+              </>
+            )}
           </p>
         </div>
       )}

@@ -90,6 +90,18 @@ MC_SAMPLES = 20            # train_gru.py MC_SAMPLES
 SCALAR_COLS = ["dh_dt", "d2h_dt2", "level_norm", "rain_duration_min",
                "dew_point_c", "vpd_kpa", "api"]
 
+# Model-ready columns of a replayed dataset row (../build_replay.py). Same order
+# as build_sequences.py packs X_seq / X_scalar for training and the test score.
+REPLAY_SEQ_COLS = [f"seq_{i}" for i in range(1, LAG_STEPS + 1)]
+REPLAY_X_COLS = ["x_dh_dt", "x_d2h_dt2", "x_level_norm", "x_rain_dur",
+                 "x_dew_point", "x_vpd", "x_api"]
+SCORE_KEYS = ("rows", "hits", "misses", "false_alarms", "correct_negatives", "band_hits")
+
+
+def _r(value: Any, digits: int) -> Optional[float]:
+    """Round a value that may be missing; missing stays missing."""
+    return None if value is None else round(float(value), digits)
+
 # Live-demo time compression (see caveat 2 above).
 LIVE_SECONDS_PER_MODEL_STEP = 6.0
 
@@ -247,6 +259,15 @@ class FloodAI:
         }
         self._last_result: Dict[str, Any] = {}
         self._last_inference_ms: float = 0.0
+        # Replay mode (replay_hardware.py): a node fed real dataset rows directly,
+        # one row per model step, instead of binned sensor telemetry.
+        self._replay_rows: Dict[str, Dict[str, Any]] = {}
+        self._replay_step: Dict[str, int] = {}
+        self._replay_index: Dict[str, int] = {}
+        self._replay_info: Dict[str, Any] = {}
+        self._scored_step: Dict[str, int] = {}
+        self._score: Dict[str, Dict[str, int]] = {}
+        self._score_split: Dict[str, str] = {}
 
     # -- loading -------------------------------------------------------------
     def load(self) -> None:
@@ -319,12 +340,168 @@ class FloodAI:
 
     # -- telemetry intake ----------------------------------------------------
     def ingest(self, sensor_data: Dict[str, Dict[str, Any]]) -> None:
-        """Feed nc1.py's current STATE.sensor_data in. Cheap; call every cycle."""
+        """Feed nc1.py's current STATE.sensor_data in. Cheap; call every cycle.
+        Nodes driven by a replay are skipped: their model steps arrive as whole
+        dataset rows, and binning their telemetry too would double-count."""
         now = time.time()
         for node, reading in sensor_data.items():
+            if node in self._replay_rows:
+                continue
             hist = self.histories.get(node)
             if hist is not None and isinstance(reading, dict):
                 hist.add(reading, now=now)
+
+    # -- replayed dataset rows -----------------------------------------------
+    def set_replay_info(self, meta: Dict[str, Any], rows_per_node: Dict[str, int]) -> None:
+        """Provenance of the replay file (replay_test_meta.json), for the UI."""
+        with self._lock:
+            self._replay_info = {"meta": meta or {}, "rows_per_node": dict(rows_per_node)}
+
+    def push_replay_row(self, node: str, row: Dict[str, Any], index: int) -> None:
+        """
+        One real 15-minute dataset row = one model step for `node`.
+
+        The row carries the model-ready inputs build_replay.py produced with the
+        training pipeline's own functions (parity-checked against test.npz), plus
+        the row's ground truth. Nothing is re-derived here.
+        """
+        with self._lock:
+            self._replay_rows[node] = row
+            self._replay_step[node] = self._replay_step.get(node, 0) + 1
+            self._replay_index[node] = index
+
+    @staticmethod
+    def _replay_features(row: Dict[str, Any]):
+        """(X_seq (1,8,1), X_scalar (1,7)) straight from the row, or None if incomplete."""
+        try:
+            seq = [float(row[c]) for c in REPLAY_SEQ_COLS]
+            sca = [float(row[c]) for c in REPLAY_X_COLS]
+        except (KeyError, TypeError, ValueError):
+            return None
+        return (np.asarray(seq, np.float32).reshape(1, LAG_STEPS, 1),
+                np.asarray(sca, np.float32).reshape(1, -1))
+
+    def _replay_entry(self, node: str, m: Dict[str, Any], p: float, q) -> Dict[str, Any]:
+        """Replay-only payload fields, and a one-time score of this row against truth."""
+        row, h_crit = m["row"], m["h_crit"]
+        truth_norm = float(row["y_level_fut"])
+        truth_flood = bool(int(row["y_flood"]))
+        in_band = bool(q[0] <= truth_norm <= q[2])
+        predicted = p >= self._threshold
+
+        with self._lock:
+            # predict_all runs every control cycle but a row lasts a whole model
+            # step, so each real row is scored exactly once.
+            if self._scored_step.get(node) != m["step"]:
+                self._scored_step[node] = m["step"]
+                self._score_split[node] = str(row["split"])
+                s = self._score.setdefault(node, dict.fromkeys(SCORE_KEYS, 0))
+                s["rows"] += 1
+                s["band_hits"] += int(in_band)
+                if predicted and truth_flood:
+                    s["hits"] += 1
+                elif truth_flood:
+                    s["misses"] += 1
+                elif predicted:
+                    s["false_alarms"] += 1
+                else:
+                    s["correct_negatives"] += 1
+
+        return {
+            "level_source": "gauge_replay",
+            "calibration": None,                 # real metres - nothing to calibrate
+            "model_steps": m["step"],
+            "last_reading_at": time.time(),
+            "replay": {
+                "time": row["time"],
+                "split": row["split"],
+                "window": row["window"],
+                "kind": row["kind"],
+                "rain_mm": _r(row.get("rain_mm"), 2),
+                "dh_dt_m_per_h": _r(row.get("dh_dt"), 4),
+                "api": _r(row.get("api"), 3),
+                "truth": {
+                    "flood": truth_flood,
+                    "level_norm": round(truth_norm, 4),
+                    "level_m": round(truth_norm * h_crit, 3),
+                    "in_band": in_band,
+                },
+            },
+        }
+
+    def _scorecard(self) -> Dict[str, Any]:
+        """Session tally over replayed rows. Derived ratios are None, not 0,
+        when their denominator is empty."""
+        with self._lock:
+            per = {n: dict(s) for n, s in self._score.items()}
+            splits = dict(self._score_split)
+
+        def derive(s: Dict[str, Any]) -> Dict[str, Any]:
+            h, mi, fa = s["hits"], s["misses"], s["false_alarms"]
+            s["POD"] = round(h / (h + mi), 3) if h + mi else None
+            s["FAR"] = round(fa / (h + fa), 3) if h + fa else None
+            s["CSI"] = round(h / (h + mi + fa), 3) if h + mi + fa else None
+            s["band_coverage"] = round(s["band_hits"] / s["rows"], 3) if s["rows"] else None
+            return s
+
+        # The headline total covers held-out rows only. A node replaying data
+        # the model trained on is still shown per node, but never pooled into
+        # a number that would read as skill.
+        total = dict.fromkeys(SCORE_KEYS, 0)
+        held_out_nodes = []
+        for n, s in per.items():
+            s["split"] = splits.get(n, "")
+            s["held_out"] = s["split"] in ("test", "val")
+            if s["held_out"]:
+                held_out_nodes.append(n)
+                for k in SCORE_KEYS:
+                    total[k] += s[k]
+        return {
+            "threshold": self._threshold,
+            "per_node": {n: derive(s) for n, s in sorted(per.items())},
+            "total": derive(total),
+            "total_nodes": sorted(held_out_nodes),
+            "note": ("Each replayed 15-min row scored once, this session, over windows "
+                     "selected around real floods - not comparable to whole-test-year metrics. "
+                     "The total counts held-out rows only."),
+        }
+
+    def _replay_block(self) -> Optional[Dict[str, Any]]:
+        """Replay provenance + position + scorecard, or None outside replay mode."""
+        with self._lock:
+            if not self._replay_rows:
+                return None
+            info = dict(self._replay_info)
+            rows = {n: dict(r) for n, r in self._replay_rows.items()}
+            index = dict(self._replay_index)
+        meta = info.get("meta") or {}
+        node_meta = meta.get("nodes") or {}
+        nodes: Dict[str, Any] = {}
+        for node, row in sorted(rows.items()):
+            windows = (node_meta.get(node) or {}).get("windows") or []
+            current = next((w for w in windows if w.get("window") == row["window"]), {})
+            nodes[node] = {
+                "station": row["station"],
+                "split": row["split"],
+                "time": row["time"],
+                "position": index.get(node, 0) + 1,
+                "rows": (info.get("rows_per_node") or {}).get(node),
+                "window": row["window"],
+                "windows": len(windows) or None,
+                "kind": row["kind"],
+                "window_start": current.get("start"),
+                "window_end": current.get("end"),
+                "window_peak_level_norm": current.get("peak_level_norm"),
+            }
+        return {
+            "dataset": meta.get("source", "ALL_STATIONS_labelled.csv"),
+            "generated_at": meta.get("generated_at"),
+            "split_years": meta.get("split_years"),
+            "selection": meta.get("selection"),
+            "parity": meta.get("parity_with_test_npz"),
+            "nodes": nodes,
+            "scorecard": self._scorecard(),
+        }
 
     # -- feature construction ------------------------------------------------
     def _level_metres(self, node: str, level_pct: float) -> float:
@@ -387,6 +564,11 @@ class FloodAI:
         """
         Run one MC-Dropout inference pass per ready source node.
 
+        Two kinds of node share the batch:
+          sensor  telemetry binned into model steps; features built here
+          replay  a real dataset row (replay_hardware.py) that already carries
+                  the training pipeline's model-ready inputs and its truth
+
         BLOCKING - nc1.py calls this via run_in_executor. Batches every ready
         node into a single model call so the 20 stochastic passes are paid for
         once, not three times.
@@ -394,19 +576,37 @@ class FloodAI:
         if not self.available or self._model is None:
             return self._payload(nodes={})
 
-        ready = [(n, h) for n, h in self.histories.items()
-                 if h.ready and n in NODE_CALIBRATION]
-        if not ready:
-            return self._payload(nodes={})
+        with self._lock:
+            replay_rows = dict(self._replay_rows)
+            replay_step = dict(self._replay_step)
 
         t0 = time.perf_counter()
         try:
             seqs, scas, metas = [], [], []
-            for node, hist in ready:
+            for node, hist in self.histories.items():
+                if node in replay_rows or not hist.ready or node not in NODE_CALIBRATION:
+                    continue
                 xs, xc, level_m, level_norm = self._build_features(node, hist)
                 seqs.append(xs)
                 scas.append(xc)
-                metas.append((node, hist, level_m, level_norm))
+                metas.append({"node": node, "source": "sensor", "hist": hist,
+                              "station": NODE_CALIBRATION[node]["station"],
+                              "h_crit": NODE_CALIBRATION[node]["h_crit_m"],
+                              "level_m": level_m, "level_norm": level_norm})
+            for node, row in replay_rows.items():
+                built = self._replay_features(row)
+                if built is None:
+                    continue
+                seqs.append(built[0])
+                scas.append(built[1])
+                h_crit = float(row["h_crit_m"])          # train-only flood line (station_params)
+                level_m = float(row["level_m"])
+                metas.append({"node": node, "source": "replay", "row": row,
+                              "step": replay_step.get(node, 0), "station": row["station"],
+                              "h_crit": h_crit, "level_m": level_m,
+                              "level_norm": level_m / h_crit})
+            if not metas:
+                return self._payload(nodes={})
 
             X_seq = np.concatenate(seqs, axis=0)
             X_sca = np.concatenate(scas, axis=0)
@@ -432,26 +632,18 @@ class FloodAI:
             self._last_inference_ms = (time.perf_counter() - t0) * 1000.0
 
             nodes: Dict[str, Any] = {}
-            for i, (node, hist, level_m, level_norm) in enumerate(metas):
-                h_crit = NODE_CALIBRATION[node]["h_crit_m"]
-                q = q_mean[i]
-                nodes[node] = {
+            for i, m in enumerate(metas):
+                node, h_crit, q = m["node"], m["h_crit"], q_mean[i]
+                p = float(p_mean[i])
+                entry: Dict[str, Any] = {
                     "status": "ok",
-                    "station": NODE_CALIBRATION[node]["station"],
+                    "station": m["station"],
                     "h_crit_m": round(h_crit, 3),
-                    "calibration": {
-                        "level_min_m": NODE_CALIBRATION[node]["level_min_m"],
-                        "level_max_m": NODE_CALIBRATION[node]["level_max_m"],
-                        "source": (
-                            "0 % = station lowest observed stage; 100 % = "
-                            f"{SENSOR_FULL_SCALE_OVER_HCRIT:g}x the flood line"
-                        ),
-                    },
-                    "level_m": round(level_m, 3),
-                    "level_norm": round(level_norm, 4),
-                    "flood_probability": round(float(p_mean[i]), 4),
+                    "level_m": round(m["level_m"], 3),
+                    "level_norm": round(m["level_norm"], 4),
+                    "flood_probability": round(p, 4),
                     "uncertainty": round(float(p_std[i]), 4),
-                    "alarm": bool(p_mean[i] >= self._threshold),
+                    "alarm": bool(p >= self._threshold),
                     "forecast": {
                         "q10_norm": round(float(q[0]), 4),
                         "q50_norm": round(float(q[1]), 4),
@@ -460,9 +652,24 @@ class FloodAI:
                         "q50_m": round(float(q[1]) * h_crit, 3),
                         "q90_m": round(float(q[2]) * h_crit, 3),
                     },
-                    "model_steps": hist.total_steps,
-                    "last_reading_at": hist.last_reading_at,
                 }
+                if m["source"] == "replay":
+                    entry.update(self._replay_entry(node, m, p, q))
+                else:
+                    entry.update({
+                        "level_source": "sensor_calibrated",
+                        "calibration": {
+                            "level_min_m": NODE_CALIBRATION[node]["level_min_m"],
+                            "level_max_m": NODE_CALIBRATION[node]["level_max_m"],
+                            "source": (
+                                "0 % = station lowest observed stage; 100 % = "
+                                f"{SENSOR_FULL_SCALE_OVER_HCRIT:g}x the flood line"
+                            ),
+                        },
+                        "model_steps": m["hist"].total_steps,
+                        "last_reading_at": m["hist"].last_reading_at,
+                    })
+                nodes[node] = entry
             result = self._payload(nodes=nodes)
             self._last_result = result
             return result
@@ -482,6 +689,17 @@ class FloodAI:
         """
         for node in NODE_STATION:
             if node in nodes:
+                continue
+            if node in self._replay_rows:
+                # A replay row arrives with its window already built; it is only
+                # waiting for the model to load.
+                nodes[node] = {
+                    "status": "warming_up",
+                    "station": self._replay_rows[node].get("station", NODE_STATION[node]),
+                    "model_steps": self._replay_step.get(node, 0),
+                    "steps_required": 1,
+                    "last_reading_at": time.time(),
+                }
                 continue
             hist = self.histories[node]
             nodes[node] = {
@@ -530,6 +748,10 @@ class FloodAI:
                 "time_compressed": LIVE_SECONDS_PER_MODEL_STEP < STEP_MINUTES * 60,
                 "compression_ratio": round((STEP_MINUTES * 60) / LIVE_SECONDS_PER_MODEL_STEP, 1),
             },
+            # "replay" when source nodes are driven by real dataset rows; the UI
+            # then labels readings as real gauge data rather than simulated.
+            "source": "replay" if self._replay_rows else "sensor",
+            "replay": self._replay_block(),
             "nodes": nodes,
             "worst": worst,
             "evaluation": self._evaluation,

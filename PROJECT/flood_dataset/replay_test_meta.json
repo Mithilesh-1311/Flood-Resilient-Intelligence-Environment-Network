@@ -1,0 +1,672 @@
+{
+  "generated_at": "2026-09-10T07:55:57+00:00",
+  "source": "ALL_STATIONS_labelled.csv",
+  "split_years": {
+    "train": [
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020
+    ],
+    "val": [
+      2021,
+      2022
+    ],
+    "test": [
+      2023,
+      2024
+    ]
+  },
+  "selection": "windows around every flood in the held-out split: 12 h run-up, the flood, 6 h recession; gap-free 15-min rows only",
+  "step_minutes": 15,
+  "rows": 6140,
+  "rows_per_split_per_station": {
+    "Boscastle_RiverValency": {
+      "test": 70174,
+      "val": 70054,
+      "train": 210424
+    },
+    "LowBriery_RiverGreta": {
+      "test": 0,
+      "val": 0,
+      "train": 205353
+    },
+    "Scalehill_RiverCocker": {
+      "test": 70174,
+      "val": 70080,
+      "train": 210424
+    }
+  },
+  "nodes": {
+    "S1": {
+      "station": "Scalehill_RiverCocker",
+      "split": "test",
+      "seen_in_training": false,
+      "h_crit_m": 1.41,
+      "windows": [
+        {
+          "window": 0,
+          "kind": "flood_event",
+          "start": "2023-01-10 10:00:00",
+          "end": "2023-01-11 22:45:00",
+          "rows": 148,
+          "hours": 37.0,
+          "peak_level_norm": 1.086,
+          "rows_at_or_above_flood_line": 76,
+          "y_flood_rows": 77
+        },
+        {
+          "window": 1,
+          "kind": "flood_event",
+          "start": "2023-10-06 06:45:00",
+          "end": "2023-10-07 20:45:00",
+          "rows": 153,
+          "hours": 38.25,
+          "peak_level_norm": 1.047,
+          "rows_at_or_above_flood_line": 81,
+          "y_flood_rows": 82
+        },
+        {
+          "window": 2,
+          "kind": "flood_event",
+          "start": "2024-01-21 02:00:00",
+          "end": "2024-01-22 19:00:00",
+          "rows": 165,
+          "hours": 41.25,
+          "peak_level_norm": 1.157,
+          "rows_at_or_above_flood_line": 93,
+          "y_flood_rows": 94
+        },
+        {
+          "window": 3,
+          "kind": "flood_event",
+          "start": "2024-08-21 19:30:00",
+          "end": "2024-08-25 01:00:00",
+          "rows": 311,
+          "hours": 77.75,
+          "peak_level_norm": 1.248,
+          "rows_at_or_above_flood_line": 239,
+          "y_flood_rows": 240
+        },
+        {
+          "window": 4,
+          "kind": "flood_event",
+          "start": "2024-08-27 02:15:00",
+          "end": "2024-08-29 09:30:00",
+          "rows": 222,
+          "hours": 55.5,
+          "peak_level_norm": 1.323,
+          "rows_at_or_above_flood_line": 150,
+          "y_flood_rows": 151
+        }
+      ]
+    },
+    "S2": {
+      "station": "LowBriery_RiverGreta",
+      "split": "train",
+      "seen_in_training": true,
+      "h_crit_m": 1.642,
+      "windows": [
+        {
+          "window": 0,
+          "kind": "flood_event",
+          "start": "2017-02-26 04:15:00",
+          "end": "2017-02-27 02:00:00",
+          "rows": 88,
+          "hours": 22.0,
+          "peak_level_norm": 1.057,
+          "rows_at_or_above_flood_line": 16,
+          "y_flood_rows": 17
+        },
+        {
+          "window": 1,
+          "kind": "flood_event",
+          "start": "2017-03-18 17:30:00",
+          "end": "2017-03-19 22:00:00",
+          "rows": 115,
+          "hours": 28.75,
+          "peak_level_norm": 1.127,
+          "rows_at_or_above_flood_line": 43,
+          "y_flood_rows": 44
+        },
+        {
+          "window": 2,
+          "kind": "flood_event",
+          "start": "2017-10-10 19:45:00",
+          "end": "2017-10-12 00:15:00",
+          "rows": 115,
+          "hours": 28.75,
+          "peak_level_norm": 1.132,
+          "rows_at_or_above_flood_line": 43,
+          "y_flood_rows": 44
+        },
+        {
+          "window": 3,
+          "kind": "flood_event",
+          "start": "2017-10-21 18:45:00",
+          "end": "2017-10-22 16:15:00",
+          "rows": 87,
+          "hours": 21.75,
+          "peak_level_norm": 1.062,
+          "rows_at_or_above_flood_line": 15,
+          "y_flood_rows": 16
+        },
+        {
+          "window": 4,
+          "kind": "flood_event",
+          "start": "2017-11-21 23:30:00",
+          "end": "2017-11-23 08:15:00",
+          "rows": 132,
+          "hours": 33.0,
+          "peak_level_norm": 1.297,
+          "rows_at_or_above_flood_line": 60,
+          "y_flood_rows": 61
+        },
+        {
+          "window": 5,
+          "kind": "flood_event",
+          "start": "2017-12-06 16:00:00",
+          "end": "2017-12-07 14:45:00",
+          "rows": 92,
+          "hours": 23.0,
+          "peak_level_norm": 1.11,
+          "rows_at_or_above_flood_line": 20,
+          "y_flood_rows": 21
+        },
+        {
+          "window": 6,
+          "kind": "flood_event",
+          "start": "2018-01-23 18:45:00",
+          "end": "2018-01-24 16:15:00",
+          "rows": 87,
+          "hours": 21.75,
+          "peak_level_norm": 1.101,
+          "rows_at_or_above_flood_line": 15,
+          "y_flood_rows": 16
+        },
+        {
+          "window": 7,
+          "kind": "flood_event",
+          "start": "2018-10-12 06:30:00",
+          "end": "2018-10-14 09:00:00",
+          "rows": 203,
+          "hours": 50.75,
+          "peak_level_norm": 1.256,
+          "rows_at_or_above_flood_line": 89,
+          "y_flood_rows": 91
+        },
+        {
+          "window": 8,
+          "kind": "flood_event",
+          "start": "2018-11-28 06:45:00",
+          "end": "2018-11-29 22:00:00",
+          "rows": 158,
+          "hours": 39.5,
+          "peak_level_norm": 1.105,
+          "rows_at_or_above_flood_line": 31,
+          "y_flood_rows": 33
+        },
+        {
+          "window": 9,
+          "kind": "flood_event",
+          "start": "2019-02-07 21:45:00",
+          "end": "2019-02-08 21:00:00",
+          "rows": 94,
+          "hours": 23.5,
+          "peak_level_norm": 1.122,
+          "rows_at_or_above_flood_line": 22,
+          "y_flood_rows": 23
+        },
+        {
+          "window": 10,
+          "kind": "flood_event",
+          "start": "2019-03-11 15:30:00",
+          "end": "2019-03-12 19:00:00",
+          "rows": 111,
+          "hours": 27.75,
+          "peak_level_norm": 1.192,
+          "rows_at_or_above_flood_line": 39,
+          "y_flood_rows": 40
+        },
+        {
+          "window": 11,
+          "kind": "flood_event",
+          "start": "2019-03-13 16:30:00",
+          "end": "2019-03-14 17:30:00",
+          "rows": 101,
+          "hours": 25.25,
+          "peak_level_norm": 1.089,
+          "rows_at_or_above_flood_line": 29,
+          "y_flood_rows": 30
+        },
+        {
+          "window": 12,
+          "kind": "flood_event",
+          "start": "2019-03-15 22:30:00",
+          "end": "2019-03-17 05:30:00",
+          "rows": 125,
+          "hours": 31.25,
+          "peak_level_norm": 1.135,
+          "rows_at_or_above_flood_line": 53,
+          "y_flood_rows": 54
+        },
+        {
+          "window": 13,
+          "kind": "flood_event",
+          "start": "2019-08-09 19:00:00",
+          "end": "2019-08-11 09:30:00",
+          "rows": 155,
+          "hours": 38.75,
+          "peak_level_norm": 1.147,
+          "rows_at_or_above_flood_line": 55,
+          "y_flood_rows": 57
+        },
+        {
+          "window": 14,
+          "kind": "flood_event",
+          "start": "2019-12-10 03:30:00",
+          "end": "2019-12-11 05:30:00",
+          "rows": 105,
+          "hours": 26.25,
+          "peak_level_norm": 1.205,
+          "rows_at_or_above_flood_line": 33,
+          "y_flood_rows": 34
+        },
+        {
+          "window": 15,
+          "kind": "flood_event",
+          "start": "2020-01-11 04:15:00",
+          "end": "2020-01-12 02:15:00",
+          "rows": 89,
+          "hours": 22.25,
+          "peak_level_norm": 1.055,
+          "rows_at_or_above_flood_line": 17,
+          "y_flood_rows": 18
+        },
+        {
+          "window": 16,
+          "kind": "flood_event",
+          "start": "2020-02-08 11:15:00",
+          "end": "2020-02-10 05:15:00",
+          "rows": 169,
+          "hours": 42.25,
+          "peak_level_norm": 1.436,
+          "rows_at_or_above_flood_line": 97,
+          "y_flood_rows": 98
+        },
+        {
+          "window": 17,
+          "kind": "flood_event",
+          "start": "2020-02-15 03:00:00",
+          "end": "2020-02-16 16:45:00",
+          "rows": 152,
+          "hours": 38.0,
+          "peak_level_norm": 1.323,
+          "rows_at_or_above_flood_line": 80,
+          "y_flood_rows": 81
+        },
+        {
+          "window": 18,
+          "kind": "flood_event",
+          "start": "2020-02-19 15:00:00",
+          "end": "2020-02-20 22:30:00",
+          "rows": 127,
+          "hours": 31.75,
+          "peak_level_norm": 1.144,
+          "rows_at_or_above_flood_line": 55,
+          "y_flood_rows": 56
+        },
+        {
+          "window": 19,
+          "kind": "flood_event",
+          "start": "2020-02-21 03:45:00",
+          "end": "2020-02-22 22:00:00",
+          "rows": 170,
+          "hours": 42.5,
+          "peak_level_norm": 1.199,
+          "rows_at_or_above_flood_line": 98,
+          "y_flood_rows": 99
+        },
+        {
+          "window": 20,
+          "kind": "flood_event",
+          "start": "2020-02-24 02:15:00",
+          "end": "2020-02-24 23:15:00",
+          "rows": 85,
+          "hours": 21.25,
+          "peak_level_norm": 1.01,
+          "rows_at_or_above_flood_line": 13,
+          "y_flood_rows": 14
+        },
+        {
+          "window": 21,
+          "kind": "flood_event",
+          "start": "2020-02-28 17:30:00",
+          "end": "2020-02-29 14:15:00",
+          "rows": 84,
+          "hours": 21.0,
+          "peak_level_norm": 1.026,
+          "rows_at_or_above_flood_line": 12,
+          "y_flood_rows": 13
+        },
+        {
+          "window": 22,
+          "kind": "flood_event",
+          "start": "2020-10-03 06:30:00",
+          "end": "2020-10-04 08:15:00",
+          "rows": 104,
+          "hours": 26.0,
+          "peak_level_norm": 1.043,
+          "rows_at_or_above_flood_line": 29,
+          "y_flood_rows": 31
+        },
+        {
+          "window": 23,
+          "kind": "flood_event",
+          "start": "2020-11-01 08:00:00",
+          "end": "2020-11-02 10:15:00",
+          "rows": 106,
+          "hours": 26.5,
+          "peak_level_norm": 1.118,
+          "rows_at_or_above_flood_line": 34,
+          "y_flood_rows": 35
+        }
+      ]
+    },
+    "S3": {
+      "station": "Boscastle_RiverValency",
+      "split": "test",
+      "seen_in_training": false,
+      "h_crit_m": 1.164,
+      "windows": [
+        {
+          "window": 0,
+          "kind": "flood_event",
+          "start": "2023-01-06 16:45:00",
+          "end": "2023-01-07 11:00:00",
+          "rows": 74,
+          "hours": 18.5,
+          "peak_level_norm": 1.02,
+          "rows_at_or_above_flood_line": 2,
+          "y_flood_rows": 3
+        },
+        {
+          "window": 1,
+          "kind": "flood_event",
+          "start": "2023-01-13 15:15:00",
+          "end": "2023-01-14 12:00:00",
+          "rows": 84,
+          "hours": 21.0,
+          "peak_level_norm": 1.114,
+          "rows_at_or_above_flood_line": 12,
+          "y_flood_rows": 13
+        },
+        {
+          "window": 2,
+          "kind": "flood_event",
+          "start": "2023-01-15 11:15:00",
+          "end": "2023-01-16 07:30:00",
+          "rows": 82,
+          "hours": 20.5,
+          "peak_level_norm": 1.114,
+          "rows_at_or_above_flood_line": 10,
+          "y_flood_rows": 11
+        },
+        {
+          "window": 3,
+          "kind": "flood_event",
+          "start": "2023-11-01 10:45:00",
+          "end": "2023-11-02 15:00:00",
+          "rows": 114,
+          "hours": 28.5,
+          "peak_level_norm": 1.057,
+          "rows_at_or_above_flood_line": 13,
+          "y_flood_rows": 15
+        },
+        {
+          "window": 4,
+          "kind": "flood_event",
+          "start": "2023-11-15 18:00:00",
+          "end": "2023-11-16 14:30:00",
+          "rows": 83,
+          "hours": 20.75,
+          "peak_level_norm": 1.192,
+          "rows_at_or_above_flood_line": 11,
+          "y_flood_rows": 12
+        },
+        {
+          "window": 5,
+          "kind": "flood_event",
+          "start": "2023-12-03 11:15:00",
+          "end": "2023-12-04 06:30:00",
+          "rows": 78,
+          "hours": 19.5,
+          "peak_level_norm": 1.063,
+          "rows_at_or_above_flood_line": 6,
+          "y_flood_rows": 7
+        },
+        {
+          "window": 6,
+          "kind": "flood_event",
+          "start": "2023-12-07 01:45:00",
+          "end": "2023-12-07 21:15:00",
+          "rows": 79,
+          "hours": 19.75,
+          "peak_level_norm": 1.039,
+          "rows_at_or_above_flood_line": 7,
+          "y_flood_rows": 8
+        },
+        {
+          "window": 7,
+          "kind": "flood_event",
+          "start": "2023-12-08 18:15:00",
+          "end": "2023-12-09 13:45:00",
+          "rows": 79,
+          "hours": 19.75,
+          "peak_level_norm": 1.052,
+          "rows_at_or_above_flood_line": 7,
+          "y_flood_rows": 8
+        },
+        {
+          "window": 8,
+          "kind": "flood_event",
+          "start": "2023-12-11 11:45:00",
+          "end": "2023-12-12 06:45:00",
+          "rows": 77,
+          "hours": 19.25,
+          "peak_level_norm": 1.059,
+          "rows_at_or_above_flood_line": 5,
+          "y_flood_rows": 6
+        },
+        {
+          "window": 9,
+          "kind": "flood_event",
+          "start": "2023-12-18 21:15:00",
+          "end": "2023-12-19 16:45:00",
+          "rows": 79,
+          "hours": 19.75,
+          "peak_level_norm": 1.034,
+          "rows_at_or_above_flood_line": 7,
+          "y_flood_rows": 8
+        },
+        {
+          "window": 10,
+          "kind": "flood_event",
+          "start": "2023-12-26 23:00:00",
+          "end": "2023-12-27 21:00:00",
+          "rows": 89,
+          "hours": 22.25,
+          "peak_level_norm": 1.126,
+          "rows_at_or_above_flood_line": 17,
+          "y_flood_rows": 18
+        },
+        {
+          "window": 11,
+          "kind": "flood_event",
+          "start": "2024-01-01 05:00:00",
+          "end": "2024-01-03 08:45:00",
+          "rows": 208,
+          "hours": 52.0,
+          "peak_level_norm": 1.247,
+          "rows_at_or_above_flood_line": 65,
+          "y_flood_rows": 68
+        },
+        {
+          "window": 12,
+          "kind": "flood_event",
+          "start": "2024-01-04 20:45:00",
+          "end": "2024-01-05 14:45:00",
+          "rows": 73,
+          "hours": 18.25,
+          "peak_level_norm": 1.003,
+          "rows_at_or_above_flood_line": 1,
+          "y_flood_rows": 2
+        },
+        {
+          "window": 13,
+          "kind": "flood_event",
+          "start": "2024-02-08 15:15:00",
+          "end": "2024-02-09 10:00:00",
+          "rows": 76,
+          "hours": 19.0,
+          "peak_level_norm": 1.021,
+          "rows_at_or_above_flood_line": 4,
+          "y_flood_rows": 5
+        },
+        {
+          "window": 14,
+          "kind": "flood_event",
+          "start": "2024-02-17 14:30:00",
+          "end": "2024-02-18 13:15:00",
+          "rows": 92,
+          "hours": 23.0,
+          "peak_level_norm": 1.273,
+          "rows_at_or_above_flood_line": 20,
+          "y_flood_rows": 21
+        },
+        {
+          "window": 15,
+          "kind": "flood_event",
+          "start": "2024-02-20 19:45:00",
+          "end": "2024-02-22 20:15:00",
+          "rows": 195,
+          "hours": 48.75,
+          "peak_level_norm": 1.152,
+          "rows_at_or_above_flood_line": 45,
+          "y_flood_rows": 48
+        },
+        {
+          "window": 16,
+          "kind": "flood_event",
+          "start": "2024-05-01 18:30:00",
+          "end": "2024-05-02 15:00:00",
+          "rows": 83,
+          "hours": 20.75,
+          "peak_level_norm": 1.153,
+          "rows_at_or_above_flood_line": 11,
+          "y_flood_rows": 12
+        },
+        {
+          "window": 17,
+          "kind": "flood_event",
+          "start": "2024-09-29 08:15:00",
+          "end": "2024-09-30 03:00:00",
+          "rows": 76,
+          "hours": 19.0,
+          "peak_level_norm": 1.024,
+          "rows_at_or_above_flood_line": 4,
+          "y_flood_rows": 5
+        },
+        {
+          "window": 18,
+          "kind": "flood_event",
+          "start": "2024-10-06 01:15:00",
+          "end": "2024-10-06 19:30:00",
+          "rows": 74,
+          "hours": 18.5,
+          "peak_level_norm": 1.015,
+          "rows_at_or_above_flood_line": 2,
+          "y_flood_rows": 3
+        },
+        {
+          "window": 19,
+          "kind": "flood_event",
+          "start": "2024-10-13 14:00:00",
+          "end": "2024-10-14 08:15:00",
+          "rows": 74,
+          "hours": 18.5,
+          "peak_level_norm": 1.023,
+          "rows_at_or_above_flood_line": 2,
+          "y_flood_rows": 3
+        },
+        {
+          "window": 20,
+          "kind": "flood_event",
+          "start": "2024-10-15 12:45:00",
+          "end": "2024-10-16 08:15:00",
+          "rows": 79,
+          "hours": 19.75,
+          "peak_level_norm": 1.087,
+          "rows_at_or_above_flood_line": 7,
+          "y_flood_rows": 8
+        },
+        {
+          "window": 21,
+          "kind": "flood_event",
+          "start": "2024-11-23 02:00:00",
+          "end": "2024-11-25 18:15:00",
+          "rows": 258,
+          "hours": 64.5,
+          "peak_level_norm": 1.496,
+          "rows_at_or_above_flood_line": 164,
+          "y_flood_rows": 167
+        },
+        {
+          "window": 22,
+          "kind": "flood_event",
+          "start": "2024-11-30 17:15:00",
+          "end": "2024-12-01 13:15:00",
+          "rows": 81,
+          "hours": 20.25,
+          "peak_level_norm": 1.228,
+          "rows_at_or_above_flood_line": 9,
+          "y_flood_rows": 10
+        }
+      ]
+    }
+  },
+  "parity_with_test_npz": {
+    "checked": true,
+    "passed": true,
+    "rows": 6140,
+    "missing_rows": 0,
+    "y_flood_mismatches": 0,
+    "unchecked_rows": 0,
+    "splits": {
+      "test": {
+        "checked": true,
+        "passed": true,
+        "against": "test.npz",
+        "rows": 3286,
+        "missing_rows": 0,
+        "y_flood_mismatches": 0,
+        "max_abs_err_seq": 5.9520099293663975e-08,
+        "max_abs_err_scalars": 2.3721148245670065e-07,
+        "max_abs_err_y_level": 5.9520099293663975e-08
+      },
+      "train": {
+        "checked": true,
+        "passed": true,
+        "against": "train.npz",
+        "rows": 2854,
+        "missing_rows": 0,
+        "y_flood_mismatches": 0,
+        "max_abs_err_seq": 5.9386844553088736e-08,
+        "max_abs_err_scalars": 2.375040546453988e-07,
+        "max_abs_err_y_level": 5.9386844553088736e-08
+      }
+    }
+  }
+}
