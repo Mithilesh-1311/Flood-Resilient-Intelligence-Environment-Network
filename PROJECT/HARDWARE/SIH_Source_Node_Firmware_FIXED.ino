@@ -64,7 +64,7 @@
 // >>> Set to true if no DHT/HW-038/MH-RD are physically wired yet. Sends
 // plausible fake readings instead, so you can test ESP-NOW/routing/health
 // end-to-end before wiring sensors. Set to false once hardware is attached. <<<
-#define USE_SIMULATED_SENSORS true
+#define USE_SIMULATED_SENSORS false
 
 #if THIS_NODE == NODE_S1
   const char *NODE_ID = "S1";
