@@ -1,0 +1,61 @@
+{
+  "log_cols": [
+    "rain_duration_min",
+    "api"
+  ],
+  "signed_log_cols": {
+    "dh_dt": 100.0,
+    "d2h_dt2": 100.0
+  },
+  "scaler": {
+    "dh_dt": {
+      "mean": -0.0381776306731732,
+      "std": 0.5222700376252029
+    },
+    "d2h_dt2": {
+      "mean": 0.013716074004987497,
+      "std": 1.0712930950713055
+    },
+    "level_norm": {
+      "mean": 0.6106740520338071,
+      "std": 0.19704233522006845
+    },
+    "rain_duration_min": {
+      "mean": 0.2850769885382733,
+      "std": 1.0444871965913367
+    },
+    "dew_point_c": {
+      "mean": 7.252729433980655,
+      "std": 4.750634520426087
+    },
+    "vpd_kpa": {
+      "mean": 0.2123184726150266,
+      "std": 0.19976645548779404
+    },
+    "api": {
+      "mean": 2.865619338022064,
+      "std": 1.811127149828061
+    }
+  },
+  "lag_steps": 8,
+  "station_params": {
+    "Boscastle_RiverValency": {
+      "level_min_m": 0.801,
+      "level_max_m": 2.192,
+      "h_crit_m": 1.164,
+      "train_rows": 210424
+    },
+    "LowBriery_RiverGreta": {
+      "level_min_m": 0.457,
+      "level_max_m": 3.75,
+      "h_crit_m": 1.642,
+      "train_rows": 205353
+    },
+    "Scalehill_RiverCocker": {
+      "level_min_m": 0.27,
+      "level_max_m": 3.144,
+      "h_crit_m": 1.41,
+      "train_rows": 210424
+    }
+  }
+}

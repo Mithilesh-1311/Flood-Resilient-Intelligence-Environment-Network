@@ -45,6 +45,11 @@ page.on("console", (m) => {
 });
 page.on("pageerror", (e) => pageErrors.push(String(e)));
 
+// Every WebSocket the page opens, observed from the browser side. In a deployed
+// build these must go straight to the controller's origin, not the page's.
+const sockets = [];
+page.on("websocket", (ws) => sockets.push(ws));
+
 try {
   /* ---------------------------------------------------- 1. boot + socket */
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
@@ -58,9 +63,10 @@ try {
   );
   pass("WebSocket reaches LIVE");
 
-  // Exactly one socket for the whole app.
-  const socketCount = await page.evaluate(() => window.__friendSocketCount ?? null);
-  check(socketCount === null || socketCount === 1, "Single WebSocket", "instrumented count: " + socketCount);
+  // Exactly one OPEN socket for the whole app. (A dev build under StrictMode
+  // opens and immediately closes one extra, so count the live ones.)
+  const open = sockets.filter((ws) => !ws.isClosed());
+  check(open.length === 1, "Single WebSocket", open.map((ws) => ws.url()).join(", ") || "none open");
 
   /* ------------------------------------------------ 2. live values move */
   const readMetric = () =>
@@ -220,7 +226,18 @@ try {
     JSON.stringify(indicatorStates.slice(0, 2)),
   );
 
-  /* --------------------------------------------------- 10. no runtime errors */
+  /* ------------------------------- 10. deep links load directly (SPA host) */
+  // On Vercel this is what the rewrite in vercel.json guarantees: a refresh or
+  // a shared link to /analytics must serve the app, not a 404.
+  try {
+    await page.goto(BASE + "/analytics", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('h1:has-text("Analytics")', { timeout: 20000 });
+    pass("Deep link loads directly", BASE + "/analytics");
+  } catch (e) {
+    fail("Deep link loads directly", String(e).slice(0, 160));
+  }
+
+  /* --------------------------------------------------- 11. no runtime errors */
   const ignorable = (t) =>
     /favicon|Download the React DevTools|ResizeObserver loop/i.test(t);
   const realConsole = consoleErrors.filter((t) => !ignorable(t));

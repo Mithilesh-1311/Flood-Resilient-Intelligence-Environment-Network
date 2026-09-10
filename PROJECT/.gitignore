@@ -1,0 +1,21 @@
+# Environments and dependencies
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# Build and test output
+frontend/dist/
+frontend/verify-shots/
+frontend/verify-report.txt
+*.log
+
+# The raw flood dataset is ~1.8 GB; the deployed controller only needs
+# flood_dataset/preprocess_params.json, which is kept.
+flood_dataset/*.csv
+flood_dataset/*.npz
+flood_dataset/raw_cache/
+
+# Local secrets, if any are ever added
+.env
+.env.*

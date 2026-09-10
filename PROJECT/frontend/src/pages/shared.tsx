@@ -8,6 +8,7 @@ import { Segmented } from "@/components/primitives";
 import { TIME_WINDOWS } from "@/lib/constants";
 import { useRealtime, shallowEqual } from "@/realtime/RealtimeProvider";
 import { EmptyState } from "@/components/primitives";
+import { CONTROLLER_LABEL, CONTROLLER_ORIGIN } from "@/lib/config";
 
 export function PageHeader({
   title,
@@ -68,17 +69,26 @@ export function ConnectionGate({ children }: { children: ReactNode }) {
   if (hasState) return <>{children}</>;
 
   const reconnecting = link === "reconnecting" || link === "offline";
+
+  // A hosted controller and a local one fail for different reasons, so they get
+  // different advice: the hosted one is usually waking from free-tier sleep.
+  const unreachable = CONTROLLER_ORIGIN
+    ? "No response from the FRiEND controller at " + CONTROLLER_LABEL + ". A free-tier host " +
+      "sleeps when idle and can take a minute or two to wake. This view keeps retrying and " +
+      "will populate on its own."
+    : "No response from the FRiEND controller. Start it with `python simulate_hardware.py` " +
+      "(simulated field) or `python nc1.py` (real gateway), then this view will populate on " +
+      "its own — the dashboard keeps retrying.";
+
   return (
     <div className="panel">
       <EmptyState
         title={reconnecting ? "Controller unreachable" : "Initialising"}
         detail={
           reconnecting
-            ? "No response from the FRiEND controller. Start it with `python simulate_hardware.py` " +
-              "(simulated field) or `python nc1.py` (real gateway), then this view will populate on " +
-              "its own — the dashboard keeps retrying." +
-              (error ? "  Last socket error: " + error : "")
-            : "Opening the WebSocket and requesting the first state snapshot from the controller."
+            ? unreachable + (error ? "  Last socket error: " + error : "")
+            : "Opening the WebSocket and requesting the first state snapshot from " +
+              CONTROLLER_LABEL + "."
         }
       />
     </div>

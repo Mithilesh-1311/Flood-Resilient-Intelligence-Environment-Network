@@ -1,0 +1,9 @@
+# Pinned to the exact set verified against models/flood_gru.keras (saved with
+# Keras 3.15.1, which needs Python 3.11+).
+fastapi==0.115.0
+starlette==0.38.6
+uvicorn[standard]==0.32.0
+websockets==17.1
+tensorflow-cpu==2.21.0
+keras==3.15.1
+numpy==2.4.6

@@ -1,0 +1,47 @@
+{
+  "split": "test",
+  "threshold": 0.9500000000000002,
+  "onset_rows": {
+    "rows": 139274,
+    "positives": 70,
+    "hits": 34,
+    "misses": 36,
+    "false_alarms": 101,
+    "POD": 0.486,
+    "FAR": 0.748,
+    "CSI": 0.199
+  },
+  "onset_rows_per_station": {
+    "Boscastle_RiverValency": {
+      "rows": 69741,
+      "positives": 60,
+      "hits": 29,
+      "misses": 31,
+      "false_alarms": 82,
+      "POD": 0.483,
+      "FAR": 0.739,
+      "CSI": 0.204
+    },
+    "Scalehill_RiverCocker": {
+      "rows": 69533,
+      "positives": 10,
+      "hits": 5,
+      "misses": 5,
+      "false_alarms": 19,
+      "POD": 0.5,
+      "FAR": 0.792,
+      "CSI": 0.172
+    }
+  },
+  "events": {
+    "events": 35,
+    "caught": 27,
+    "missed": 8,
+    "event_POD": 0.771,
+    "false_alarm_episodes": 52,
+    "lead_time_median_min": 15.0,
+    "lead_time_mean_min": 36.1,
+    "lead_time_max_min": 120.0,
+    "lookback_hours": 6
+  }
+}

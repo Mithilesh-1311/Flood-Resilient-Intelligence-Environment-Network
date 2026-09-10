@@ -1,0 +1,61 @@
+{
+  "validation": {
+    "threshold": 0.9500000000000002,
+    "hits": 1107,
+    "misses": 145,
+    "false_alarms": 42,
+    "POD": 0.884,
+    "FAR": 0.037,
+    "CSI": 0.855,
+    "onset_rows": {
+      "threshold": 0.9500000000000002,
+      "hits": 25,
+      "misses": 37,
+      "false_alarms": 33,
+      "POD": 0.403,
+      "FAR": 0.569,
+      "CSI": 0.263
+    },
+    "band_coverage": 0.998
+  },
+  "test": {
+    "threshold": 0.9500000000000002,
+    "hits": 997,
+    "misses": 108,
+    "false_alarms": 130,
+    "POD": 0.902,
+    "FAR": 0.115,
+    "CSI": 0.807,
+    "band_coverage": 0.997,
+    "mean_uncertainty": 0.0123,
+    "onset_rows": {
+      "threshold": 0.9500000000000002,
+      "hits": 25,
+      "misses": 45,
+      "false_alarms": 110,
+      "POD": 0.357,
+      "FAR": 0.815,
+      "CSI": 0.139
+    }
+  },
+  "test_per_station": {
+    "Boscastle_RiverValency": {
+      "threshold": 0.9500000000000002,
+      "hits": 372,
+      "misses": 89,
+      "false_alarms": 108,
+      "POD": 0.807,
+      "FAR": 0.225,
+      "CSI": 0.654
+    },
+    "Scalehill_RiverCocker": {
+      "threshold": 0.9500000000000002,
+      "hits": 625,
+      "misses": 19,
+      "false_alarms": 22,
+      "POD": 0.97,
+      "FAR": 0.034,
+      "CSI": 0.938
+    }
+  }
+}
