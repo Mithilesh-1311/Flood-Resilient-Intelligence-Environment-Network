@@ -1,0 +1,20 @@
+{
+  "id": "bf11cee4-5e5e-4087-bb20-a68b0a140288",
+  "name": "Boscastle_RiverValency",
+  "role": "S3",
+  "h_crit_m": null,
+  "label": "Boscastle New Mills",
+  "lat": 50.689801,
+  "long": -4.66631,
+  "catchment_km2": null,
+  "river": "River Valency",
+  "rain_gauge": {
+    "id": "dce732a2-e673-4341-b2b0-41cf95a63411",
+    "label": "Boscastle",
+    "dist_km": 2.3
+  },
+  "rows": 350656,
+  "h_crit_m_used": 1.15,
+  "start": "2015-01-01 02:00:00",
+  "end": "2024-12-31 23:45:00"
+}

@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * FRiEND control-room base.
+ * Dark-committed by design: this is an operations console, not a document.
+ * Every colour is defined here explicitly so nothing borrows a host theme.
+ */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --grid-line: rgba(255, 255, 255, 0.028);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-base-900 text-ink font-sans antialiased;
+    margin: 0;
+    font-size: 13px;
+    /* A faint engineering grid, not decoration: it gives the dense panels a
+       shared rhythm and keeps large empty regions from reading as broken. */
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Visible, non-colour-dependent focus for keyboard users. */
+  :focus-visible {
+    outline: 1px solid #3fa7d6;
+    outline-offset: 1px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0d1117;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #232b34;
+    border: 2px solid #0d1117;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #303a45;
+  }
+}
+
+@layer components {
+  /* Section eyebrow: the small tracked capitals that label every panel. */
+  .eyebrow {
+    @apply text-2xs font-medium uppercase tracking-[0.14em] text-ink-faint;
+  }
+
+  .panel {
+    @apply border border-line bg-base-800;
+  }
+
+  .panel-head {
+    @apply flex items-center justify-between gap-3 border-b border-line px-3 py-2;
+  }
+
+  /* Instrument readout: large monospace figures with tabular alignment so
+     digits do not jitter sideways as values update. */
+  .readout {
+    @apply font-mono tabular-nums tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cell {
+    @apply px-3 py-1.5 font-mono text-xs tabular-nums;
+  }
+
+  .th {
+    @apply px-3 py-1.5 text-left text-2xs font-medium uppercase tracking-[0.12em] text-ink-faint;
+  }
+}
+
+@layer utilities {
+  /* A single 1s sweep used when a value changes - a brief tint, no motion. */
+  @keyframes tick {
+    0% {
+      background-color: rgba(63, 167, 214, 0.16);
+    }
+    100% {
+      background-color: transparent;
+    }
+  }
+  .animate-tick {
+    animation: tick 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  .animate-pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* Dashes crawling along an active route edge, at a computational pace. */
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+  .animate-flow {
+    animation: flow 1.6s linear infinite;
+  }
+}
+
+/*
+ * Accessibility: honour the OS reduced-motion setting everywhere at once,
+ * including the SVG route animations and Framer Motion transitions.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

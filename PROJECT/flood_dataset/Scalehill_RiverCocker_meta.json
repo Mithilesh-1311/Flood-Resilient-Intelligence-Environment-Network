@@ -1,0 +1,20 @@
+{
+  "id": "532a2993-7275-4050-8df4-b2314bc4f8e0",
+  "name": "Scalehill_RiverCocker",
+  "role": "S1",
+  "h_crit_m": null,
+  "label": "Scalehill",
+  "lat": 54.580895,
+  "long": -3.318128,
+  "catchment_km2": 64.0,
+  "river": "River Cocker",
+  "rain_gauge": {
+    "id": "0604776f-e579-4b63-840e-26a74c188843",
+    "label": "Cornhow",
+    "dist_km": 0.8
+  },
+  "rows": 350680,
+  "h_crit_m_used": 1.424,
+  "start": "2015-01-01 02:00:00",
+  "end": "2024-12-31 23:45:00"
+}

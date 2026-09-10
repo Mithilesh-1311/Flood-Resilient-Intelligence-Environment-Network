@@ -1,0 +1,130 @@
+--- nc1.py.orig	2026-09-10 01:19:18.420314800 +0530
++++ nc1.py	2026-09-10 02:11:48.374386400 +0530
+@@ -45,8 +45,20 @@
+ from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple
+ 
+ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
++from fastapi.middleware.cors import CORSMiddleware
+ import uvicorn
+ 
++# Live Flood-Risk AI. Optional by design: if TensorFlow or ../models is not
++# present, flood_ai reports available=False and this controller keeps running
++# exactly as before - network state is never blocked on the model.
++try:
++    from flood_ai import FLOOD_AI
++except Exception as _flood_ai_exc:  # noqa: BLE001
++    FLOOD_AI = None
++    _FLOOD_AI_IMPORT_ERROR = f"{type(_flood_ai_exc).__name__}: {_flood_ai_exc}"
++else:
++    _FLOOD_AI_IMPORT_ERROR = None
++
+ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+ log = logging.getLogger("network_controller")
+ 
+@@ -544,6 +556,8 @@
+     route_slots: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+     route_participation: Dict[str, int] = field(default_factory=dict)
+     packet_stats_summary: Dict[str, Any] = field(default_factory=dict)
++    flood_ai: Dict[str, Any] = field(default_factory=dict)
++    system: Dict[str, Any] = field(default_factory=dict)
+     timestamp: float = field(default_factory=time.time)
+ 
+     def as_dict(self) -> Dict[str, Any]:
+@@ -556,6 +570,8 @@
+             "route_slots": self.route_slots,
+             "route_participation": self.route_participation,
+             "packet_stats_summary": self.packet_stats_summary,
++            "flood_ai": self.flood_ai,
++            "system": self.system,
+             "timestamp": self.timestamp,
+         }
+ 
+@@ -563,6 +579,9 @@
+ STATE = NetworkState()
+ STATS = PacketStats(size=NUM_NODES)
+ 
++_started_at = time.time()
++_cycle_count = [0]
++
+ # Last-known PDR value per link. A quiet link is held briefly, then expires
+ # if measurement reports stop arriving (e.g. a node/link disappears).
+ _last_pdr: List[List[Optional[float]]] = [[None] * NUM_NODES for _ in range(NUM_NODES)]
+@@ -792,6 +811,50 @@
+         await send_health_update(STATE.node_health)
+         await send_route_update(STATE.active_routes, STATE.route_slots)
+ 
++        # 9b. Flood-Risk AI. Telemetry is folded into the per-node rolling
++        #     windows every cycle (cheap); the GRU itself runs in a worker
++        #     thread so MC-Dropout never stalls this 2 s loop.
++        if FLOOD_AI is not None:
++            FLOOD_AI.ingest(STATE.sensor_data)
++            if FLOOD_AI.available:
++                try:
++                    STATE.flood_ai = await asyncio.get_running_loop().run_in_executor(
++                        None, FLOOD_AI.predict_all
++                    )
++                except Exception as exc:  # noqa: BLE001
++                    log.warning(f"Flood AI cycle failed: {exc}")
++            else:
++                STATE.flood_ai = FLOOD_AI.snapshot()
++        else:
++            STATE.flood_ai = {
++                "available": False,
++                "status": "unavailable",
++                "reason": _FLOOD_AI_IMPORT_ERROR,
++                "nodes": {},
++                "worst": None,
++                "evaluation": {},
++            }
++
++        # 9c. Self-description, so the dashboard can state plainly whether it
++        #     is watching real hardware or the simulator, and never imply one
++        #     is the other. Derived from real state only.
++        _cycle_count[0] += 1
++        STATE.system = {
++            "gateway_connected": _gateway_connected.is_set(),
++            "gateway_host": GATEWAY_HOST,
++            "gateway_port": GATEWAY_TCP_PORT,
++            "data_source": (
++                "SIMULATION" if GATEWAY_HOST in ("127.0.0.1", "localhost", "::1")
++                else "LIVE_HARDWARE"
++            ),
++            "loop_interval_seconds": LOOP_INTERVAL_SECONDS,
++            "pdr_stale_after_seconds": PDR_STALE_AFTER_SECONDS,
++            "started_at": _started_at,
++            "uptime_seconds": round(time.time() - _started_at, 1),
++            "cycle": _cycle_count[0],
++            "ws_clients": len(_ws_clients),
++        }
++
+         # 10. Update frontend state.
+         STATE.packet_stats_summary = {
+             "total_tx": STATS.total_tx,
+@@ -848,6 +911,10 @@
+ async def lifespan(app: FastAPI):
+     gateway_task = asyncio.create_task(gateway_client_task())
+     loop_task = asyncio.create_task(control_loop())
++    if FLOOD_AI is not None:
++        # Importing TensorFlow and deserialising the GRU takes seconds; do it
++        # on a worker thread so the API and control loop come up immediately.
++        asyncio.get_running_loop().run_in_executor(None, FLOOD_AI.load)
+ 
+     try:
+         yield
+@@ -858,6 +925,16 @@
+ 
+ app = FastAPI(title="SIH 2026 Mesh Network Controller", lifespan=lifespan)
+ 
++# The FRiEND dashboard is a separate static app (frontend/). In dev it is
++# proxied through Vite on :5173; allowing any origin here means the built
++# bundle also works when opened from any demo machine on the LAN.
++app.add_middleware(
++    CORSMiddleware,
++    allow_origins=["*"],
++    allow_methods=["*"],
++    allow_headers=["*"],
++)
++
+ 
+ @app.get("/state")
+ async def get_state() -> Dict[str, Any]:

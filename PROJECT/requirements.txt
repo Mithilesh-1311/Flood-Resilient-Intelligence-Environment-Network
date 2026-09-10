@@ -1,0 +1,24 @@
+# FRiEND controller runtime.
+#
+# Python 3.11+ is required: models/flood_gru.keras was saved with Keras 3.15.1,
+# and Keras >= 3.13 does not publish wheels for 3.10. On 3.10 the model fails to
+# deserialise with "GlorotUniform.__init__() got an unexpected keyword argument
+# 'input_axes'", and flood_ai.py then reports available=False rather than
+# guessing values.
+#
+#   py -3.11 -m venv .venv
+#   .venv/Scripts/python -m pip install -r requirements.txt     # Windows
+#   .venv/bin/python -m pip install -r requirements.txt         # macOS / Linux
+
+# --- API served to the dashboard -------------------------------------------
+fastapi==0.115.0
+starlette==0.38.6          # fastapi 0.115 requires <0.39; a newer starlette breaks it
+uvicorn[standard]==0.32.0
+websockets
+
+# --- Flood-Risk AI ----------------------------------------------------------
+# Only needed for flood_ai.py. Without them the controller still runs; the
+# dashboard shows the model as OFFLINE with the reason.
+tensorflow-cpu
+keras==3.15.1              # must be >= the version the .keras artifact was saved with
+numpy

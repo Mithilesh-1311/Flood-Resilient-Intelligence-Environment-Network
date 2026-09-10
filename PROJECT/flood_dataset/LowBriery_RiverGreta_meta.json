@@ -1,0 +1,20 @@
+{
+  "id": "94de4171-c8ca-4e4c-9897-9fe4a6576582",
+  "name": "LowBriery_RiverGreta",
+  "role": "S2",
+  "h_crit_m": null,
+  "label": "Low Briery",
+  "lat": 54.608017,
+  "long": -3.107571,
+  "catchment_km2": null,
+  "river": "River Greta",
+  "rain_gauge": {
+    "id": "2a8ae42c-5e2b-447d-b702-bd11f9874c14",
+    "label": "Keswick",
+    "dist_km": 3.2
+  },
+  "rows": 205355,
+  "h_crit_m_used": 1.642,
+  "start": "2015-01-01 02:00:00",
+  "end": "2020-11-09 04:30:00"
+}

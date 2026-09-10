@@ -1,0 +1,12 @@
+{
+  "threshold": 0.9500000000000002,
+  "threshold_tuned_on": "validation onset rows",
+  "pos_weight": 40.0,
+  "onset_boost": 5.0,
+  "quantiles": [
+    0.1,
+    0.5,
+    0.9
+  ],
+  "mc_samples": 20
+}
