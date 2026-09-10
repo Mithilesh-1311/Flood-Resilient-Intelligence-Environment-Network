@@ -15,7 +15,7 @@ taken on trust. The full diff for `nc1.py` is in `nc1.integration.patch`.
 | `build_replay.py` | **New.** Builds the replay file with the pipeline's own functions. |
 | `flood_dataset/replay_test.csv`, `replay_test_meta.json` | **New.** 6,140 real rows + provenance. |
 | `HARDWARE/*.ino` | **Unchanged.** |
-| `models/*`, `flood_dataset/*` | **Unchanged.** Read-only. |
+| `models/*`, existing `flood_dataset/*` files | **Unchanged.** Read-only. |
 | `train_gru.py`, `predict_demo.py`, and the rest of the pipeline | **Unchanged.** |
 | `frontend/` | **New.** The dashboard. |
 
@@ -139,13 +139,24 @@ around:
 ## Verification
 
 `frontend/verify.mjs` drives the real dashboard against the real controller in a
-real browser and checks 22 behaviours, including the ones that are easy to fake:
-that chart history grows and survives navigation, that unmeasured PDR renders as
-a dash rather than 0 %, that the gateway row is empty, that alert events trace to
-real reroutes, and that `RESET MESH HEALTH` reaches the controller.
+real browser. It checks the behaviours that are easy to fake:
+
+- chart history grows and survives navigation
+- unmeasured PDR renders as a dash rather than 0 %
+- the gateway row is empty
+- alert events trace to real reroutes
+- `RESET MESH HEALTH` reaches the controller
+
+When the controller is replaying real data, six more checks confirm that:
+
+- the data is labelled real
+- each prediction is shown next to its real outcome
+- the scorecard runs
+- input parity is disclosed
+- training-period rows stay out of the held-out total
 
 ```bash
-cd HARDWARE && ../.venv/Scripts/python simulate_hardware.py    # terminal 1
+cd HARDWARE && ../.venv/Scripts/python replay_hardware.py      # terminal 1
 cd frontend && npm run dev                                     # terminal 2
 cd frontend && npm run verify                                  # terminal 3
 ```

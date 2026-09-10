@@ -184,13 +184,28 @@ try {
   await page.getByRole("button", { name: /^CONFIRM$/ }).click();
   await sleep(1200);
   const acked = await page.evaluate(() => document.body.innerText.includes("HEALTH RESET"));
-  const healthAfter = await fetch("http://127.0.0.1:8000/state").then((r) => r.json());
-  const meshAfter = healthAfter.node_health.slice(3, 10);
   check(acked, "Reset health acknowledges in UI");
+
+  // nc1 applies the reset to MANUAL_HEALTH at once but only publishes it on the
+  // next control cycle, and every cycle drains the relays its routes use - so a
+  // normal frame always has at least two mesh nodes below 100. All seven at 100
+  // is therefore the reset's own signature. Poll for it across a couple of
+  // cycles instead of reading one frame at an arbitrary moment: an earlier
+  // version did that, checked for ANY node at 100, and passed on a frame the
+  // reset had not reached yet.
+  const meshBefore = healthBefore.node_health.slice(3, 10);
+  let resetSeen = null;
+  for (let i = 0; i < 30 && !resetSeen; i += 1) {
+    const s = await fetch("http://127.0.0.1:8000/state").then((r) => r.json());
+    const mesh = s.node_health.slice(3, 10);
+    if (mesh.every((h) => h === 100)) resetSeen = { cycle: s.system?.cycle };
+    else await sleep(250);
+  }
   check(
-    meshAfter.some((h) => h === 100),
+    !!resetSeen && !meshBefore.every((h) => h === 100),
     "Reset health reached the controller",
-    `mesh before ${healthBefore.node_health.slice(3, 10)} after ${meshAfter}`,
+    `mesh before ${meshBefore}` +
+      (resetSeen ? ` -> all 100 at cycle ${resetSeen.cycle}` : " -> never all 100 within 7.5 s"),
   );
 
   /* ------------------------------------ 8. events came from state changes */

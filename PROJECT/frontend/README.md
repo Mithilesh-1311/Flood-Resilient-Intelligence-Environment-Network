@@ -91,8 +91,14 @@ substitutes a fallback weight internally and never writes it into the matrix.
 trained model, not the running network.
 
 **Simulation is stated, not implied.** The controller reports whether its TCP
-client is pointed at the real gateway or at loopback, and the header carries a
-`SIMULATION` / `LIVE HARDWARE` tag accordingly.
+client is pointed at the real gateway or at loopback, and whether the river
+readings are replayed real data. The header shows one of three things:
+
+- `LIVE HARDWARE`
+- `SIMULATION`
+- `REAL GAUGE REPLAY` with `SIMULATED MESH`
+
+In replay mode the rivers are real, but the radio network is not.
 
 **Two calibrations are disclosed in the UI, because the model and the hardware
 do not speak the same units.** See "Honest caveats" below.
